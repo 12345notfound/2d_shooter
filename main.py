@@ -1,7 +1,23 @@
 import pygame
 import random
 from math import sin, radians, cos
-# hello
+from PIL import Image
+
+
+def pic_to_map(filename):
+    im = Image.open(filename)
+    pixels = im.load()
+    x, y = im.size
+    result = [[None for _ in range(y)] for _ in range(x)]
+    for i in range(x):
+        for j in range(y):
+            if pixels[i, j] == (0, 0, 0):
+                result[i][j] = Wall(i * 100, j * 100)
+    return result
+
+
+
+
 class LootBox(pygame.sprite.Sprite):
     """Класс ящика с улучшениями"""
     def __init__(self, x, y):
@@ -34,13 +50,8 @@ class Bullet(pygame.sprite.Sprite):
         self.float_y += self.speedy
         self.rect.centerx = int(self.float_x)
         self.rect.centery = int(self.float_y)
-        # print(self.float_x, self.float_y)
-        # print()
 
 
-# class Wall(pygame.sprite.Sprite):
-#     """Класс стены"""
-#     def __init__(self, x, y, ):
 class Entity(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__(all_sprites)
@@ -49,6 +60,7 @@ class Entity(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
+        self.mask = pygame.mask.from_surface(self.image)
 
         self.health = 10
         self.max_health = 10
@@ -58,15 +70,15 @@ class Entity(pygame.sprite.Sprite):
     def move_entity(self, x, y):
         self.rect.centerx += x
         self.rect.centery += y
-
-    def update(self):
-        self.image = pygame.transform.rotate(self.image, 3)
-
+        for wall in walls:
+            if pygame.sprite.collide_mask(self, wall):
+                self.rect.centerx -= x
+                self.rect.centery -= y
+                break
 
 class Player(Entity):
     def __init__(self, x, y):
         super().__init__(x, y)
-        # self.image.fill('green')
 
     def update(self):
         xshift = 0
@@ -88,13 +100,31 @@ class Player(Entity):
         self.move_entity(xshift, yshift)
         self.direction += turn
         self.image = pygame.transform.rotate(im1, self.direction)
+        self.mask = pygame.mask.from_surface(self.image)
+        for wall in walls:
+            if pygame.sprite.collide_mask(self, wall):
+                self.direction -= turn
+                self.image = pygame.transform.rotate(im1, self.direction)
+                self.mask = pygame.mask.from_surface(self.image)
+                break
         self.rect = self.image.get_rect(center=self.rect.center)
 
 
+class Wall(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__(all_sprites, walls)
+        self.image = pygame.surface.Surface((100, 100))
+        self.image.fill((255, 255, 255))
+        self.rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.mask = pygame.mask.from_surface(self.image)
+
+
 if __name__ == '__main__':
-    FPS = 30
+    FPS = 60
     pygame.init()
-    size = width, height = 800, 600
+    size = width, height = 1600, 900
     screen = pygame.display.set_mode(size)
     clock = pygame.time.Clock()
     walls = pygame.sprite.Group()
@@ -104,9 +134,12 @@ if __name__ == '__main__':
     # test
     Bullet(10, 10, 1.4, 3.8, damage=10)
     LootBox(30, 30)
-    im1 = pygame.image.load('2_tile.png').convert()
+    im1 = pygame.image.load('circle.png').convert()
     im1.set_colorkey((255, 255, 255))
-    e = Player(400, 400)
+    e = Player(550, 550)
+    # w1 = Wall(300, 300)
+    # Wall(300, 400)
+    pic_to_map('lvl1.png')
 
     while running:
         # внутри игрового цикла ещё один цикл
