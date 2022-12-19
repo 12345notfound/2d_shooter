@@ -16,7 +16,7 @@ huhasdufhsduifhsd
 dfisdf9sdfihusdf\sdfisdfhoisdgfuhdsuifsd
 fdsfhsduify89sdf
 dfkjsdfhiosdgfuyhdsf
-sdfjsduopfhidsuhjfk
+sdfjsduopfhidsuhjfkdf
 dfiusdfhds
 class Bullet(pygame.sprite.Sprite):
     """Класс стены"""
