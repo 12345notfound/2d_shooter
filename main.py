@@ -1,6 +1,8 @@
 import pygame
 import random
-from math import sin, radians, cos
+from math import sin, radians, cos, asin, pi, degrees
+
+
 from PIL import Image
 
 
@@ -20,6 +22,7 @@ def pic_to_map(filename):
 
 class LootBox(pygame.sprite.Sprite):
     """Класс ящика с улучшениями"""
+
     def __init__(self, x, y):
         super().__init__(all_sprites)
         self.image = pygame.surface.Surface((50, 50))
@@ -31,6 +34,7 @@ class LootBox(pygame.sprite.Sprite):
 
 class Bullet(pygame.sprite.Sprite):
     """Класс стены"""
+
     def __init__(self, x, y, speed_x, speed_y, damage):
         super().__init__(all_sprites)
         self.image = pygame.surface.Surface((20, 20))
@@ -83,7 +87,7 @@ class Player(Entity):
     def update(self):
         xshift = 0
         yshift = 0
-        turn = 0
+
         keystate = pygame.key.get_pressed()
         if keystate[pygame.K_w]:
             yshift -= 5
@@ -93,12 +97,20 @@ class Player(Entity):
             xshift -= 5
         if keystate[pygame.K_d]:
             xshift += 5
-        if keystate[pygame.K_LEFT]:
-            turn -= 3
-        if keystate[pygame.K_RIGHT]:
-            turn += 3
+
+        # поворот персонажа к курсору
+        mouse_x = pygame.mouse.get_pos()[0]
+        mouse_y = pygame.mouse.get_pos()[1]
+        if self.rect.centery != mouse_y or self.rect.centerx != mouse_x:
+            turn = pi / 2 - asin(((self.rect.centery - mouse_y) / (
+                    (self.rect.centerx - mouse_x) ** 2 + (self.rect.centery - mouse_y) ** 2) ** 0.5))
+            if self.rect.centerx > mouse_x:
+                turn = degrees(turn)
+            else:
+                turn = -degrees(turn)
+            self.direction = turn
+
         self.move_entity(xshift, yshift)
-        self.direction += turn
         self.image = pygame.transform.rotate(im1, self.direction)
         self.mask = pygame.mask.from_surface(self.image)
         for wall in walls:
@@ -124,7 +136,7 @@ class Wall(pygame.sprite.Sprite):
 if __name__ == '__main__':
     FPS = 60
     pygame.init()
-    size = width, height = 1600, 900
+    size = width, height = 1400, 700
     screen = pygame.display.set_mode(size)
     clock = pygame.time.Clock()
     walls = pygame.sprite.Group()
