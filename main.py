@@ -12,6 +12,7 @@ class LootBox(pygame.sprite.Sprite):
         self.rect.centerx = x
         self.rect.centery = y
 
+
 class Bullet(pygame.sprite.Sprite):
     """Класс стены"""
     def __init__(self, x, y, speed_x, speed_y, damage):
@@ -40,6 +41,54 @@ class Bullet(pygame.sprite.Sprite):
 # class Wall(pygame.sprite.Sprite):
 #     """Класс стены"""
 #     def __init__(self, x, y, ):
+class Entity(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__(all_sprites)
+        self.image = im1
+        # self.image.fill('red')
+        self.rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.centery = y
+
+        self.health = 10
+        self.max_health = 10
+        self.damage = 5
+        self.direction = 0
+
+    def move_entity(self, x, y):
+        self.rect.centerx += x
+        self.rect.centery += y
+
+    def update(self):
+        self.image = pygame.transform.rotate(self.image, 3)
+
+
+class Player(Entity):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        # self.image.fill('green')
+
+    def update(self):
+        xshift = 0
+        yshift = 0
+        turn = 0
+        keystate = pygame.key.get_pressed()
+        if keystate[pygame.K_w]:
+            yshift -= 5
+        if keystate[pygame.K_s]:
+            yshift += 5
+        if keystate[pygame.K_a]:
+            xshift -= 5
+        if keystate[pygame.K_d]:
+            xshift += 5
+        if keystate[pygame.K_LEFT]:
+            turn -= 3
+        if keystate[pygame.K_RIGHT]:
+            turn += 3
+        self.move_entity(xshift, yshift)
+        self.direction += turn
+        self.image = pygame.transform.rotate(im1, self.direction)
+
 
 
 if __name__ == '__main__':
@@ -55,6 +104,9 @@ if __name__ == '__main__':
     # test
     Bullet(10, 10, 1.4, 3.8, damage=10)
     LootBox(30, 30)
+    im1 = pygame.image.load('2_tile.png').convert()
+    im1.set_colorkey((255, 255, 255))
+    e = Player(150, 100)
 
     while running:
         # внутри игрового цикла ещё один цикл
