@@ -143,7 +143,7 @@ if __name__ == '__main__':
     all_sprites = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
     running = True
-    # test
+    # test1
     Bullet(10, 10, 1.4, 3.8, damage=10)
     LootBox(30, 30)
     im1 = pygame.image.load('circle.png').convert()
