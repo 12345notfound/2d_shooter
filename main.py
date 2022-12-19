@@ -12,7 +12,12 @@ class LootBox(pygame.sprite.Sprite):
         self.rect.centerx = x
         self.rect.centery = y
 
-
+huhasdufhsduifhsd
+dfisdf9sdfihusdf\sdfisdfhoisdgfuhdsuifsd
+fdsfhsduify89sdf
+dfkjsdfhiosdgfuyhdsf
+sdfjsduopfhidsuhjfkdf
+dfiusdfhds
 class Bullet(pygame.sprite.Sprite):
     """Класс стены"""
     def __init__(self, x, y, speed_x, speed_y, damage):
