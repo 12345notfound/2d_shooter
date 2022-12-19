@@ -1,6 +1,6 @@
 import pygame
 import random
-
+from math import sin, radians, cos
 # hello
 class LootBox(pygame.sprite.Sprite):
     """Класс ящика с улучшениями"""
@@ -88,7 +88,7 @@ class Player(Entity):
         self.move_entity(xshift, yshift)
         self.direction += turn
         self.image = pygame.transform.rotate(im1, self.direction)
-
+        self.rect = self.image.get_rect(center=self.rect.center)
 
 
 if __name__ == '__main__':
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     LootBox(30, 30)
     im1 = pygame.image.load('2_tile.png').convert()
     im1.set_colorkey((255, 255, 255))
-    e = Player(150, 100)
+    e = Player(400, 400)
 
     while running:
         # внутри игрового цикла ещё один цикл
