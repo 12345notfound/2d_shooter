@@ -11,7 +11,7 @@ class LootBox(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
-
+#ты даун
 
 class Bullet(pygame.sprite.Sprite):
     """Класс стены"""
