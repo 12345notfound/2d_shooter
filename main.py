@@ -1,7 +1,7 @@
 import pygame
 import random
 
-
+# hello
 class LootBox(pygame.sprite.Sprite):
     """Класс ящика с улучшениями"""
     def __init__(self, x, y):
