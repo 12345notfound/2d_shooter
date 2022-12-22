@@ -72,19 +72,41 @@ class Entity(pygame.sprite.Sprite):
         self.direction = 0
 
     def move_entity(self, x, y):
-        self.rect.centerx += x
-        self.rect.centery += y
+        start_x, start_y = self.rect.centerx, self.rect.centery
+        self.rect.centerx = start_x + x
+        self.rect.centery = start_y + y
+        x_move, y_move, xy_move = True, True, True
         xshift = 0
         yshift = 0
         for wall in walls:
             if pygame.sprite.collide_rect(self, wall):
-                xshift -= x
-                yshift -= y
+                xy_move = False
                 break
-        # self.rect.centery -= y
-        # for wall in walls:
-        #     if pygame.sprite.collide_rect(self, wall):
-        #
+        self.rect.centerx = start_x + x
+        self.rect.centery = start_y
+        for wall in walls:
+            if pygame.sprite.collide_rect(self, wall):
+                x_move = False
+                break
+        self.rect.centerx = start_x
+        self.rect.centery = start_y + y
+        for wall in walls:
+            if pygame.sprite.collide_rect(self, wall):
+                y_move = False
+                break
+        if xy_move:
+            self.rect.centerx = start_x + x
+            self.rect.centery = start_y + y
+        elif x_move:
+            self.rect.centerx = start_x + x
+            self.rect.centery = start_y
+        elif y_move:
+            self.rect.centerx = start_x
+            self.rect.centery = start_y + y
+        else:
+            self.rect.centerx = start_x
+            self.rect.centery = start_y
+
 
 
 class Player(Entity):
