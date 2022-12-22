@@ -64,7 +64,7 @@ class Entity(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
-        self.mask = pygame.mask.from_surface(self.image)
+        # self.mask = pygame.mask.from_surface(self.image)
 
         self.health = 10
         self.max_health = 10
@@ -74,11 +74,18 @@ class Entity(pygame.sprite.Sprite):
     def move_entity(self, x, y):
         self.rect.centerx += x
         self.rect.centery += y
+        xshift = 0
+        yshift = 0
         for wall in walls:
-            if pygame.sprite.collide_mask(self, wall):
-                self.rect.centerx -= x
-                self.rect.centery -= y
+            if pygame.sprite.collide_rect(self, wall):
+                xshift -= x
+                yshift -= y
                 break
+        # self.rect.centery -= y
+        # for wall in walls:
+        #     if pygame.sprite.collide_rect(self, wall):
+        #
+
 
 class Player(Entity):
     def __init__(self, x, y):
@@ -112,13 +119,13 @@ class Player(Entity):
 
         self.move_entity(xshift, yshift)
         self.image = pygame.transform.rotate(im1, self.direction)
-        self.mask = pygame.mask.from_surface(self.image)
-        for wall in walls:
-            if pygame.sprite.collide_mask(self, wall):
-                self.direction -= turn
-                self.image = pygame.transform.rotate(im1, self.direction)
-                self.mask = pygame.mask.from_surface(self.image)
-                break
+        # self.mask = pygame.mask.from_surface(self.image)
+        # for wall in walls:
+        #     if pygame.sprite.collide_rect(self, wall):
+        #         self.direction -= turn
+        #         self.image = pygame.transform.rotate(im1, self.direction)
+        #         # self.mask = pygame.mask.from_surface(self.image)
+        #         break
         self.rect = self.image.get_rect(center=self.rect.center)
 
 
@@ -131,6 +138,23 @@ class Wall(pygame.sprite.Sprite):
         self.rect.centerx = x
         self.rect.centery = y
         self.mask = pygame.mask.from_surface(self.image)
+
+
+class Camera:
+    # зададим начальный сдвиг камеры
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+
+    # сдвинуть объект obj на смещение камеры
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+
+    # позиционировать камеру на объекте target
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
+        self.dy = -(target.rect.y + target.rect.h // 2 - height // 2)
 
 
 if __name__ == '__main__':
@@ -146,9 +170,10 @@ if __name__ == '__main__':
     # test1
     Bullet(10, 10, 1.4, 3.8, damage=10)
     LootBox(30, 30)
+    camera = Camera()
     im1 = pygame.image.load('circle.png').convert()
     im1.set_colorkey((255, 255, 255))
-    e = Player(550, 550)
+    player = Player(550, 550)
     # w1 = Wall(300, 300)
     # Wall(300, 400)
     pic_to_map('lvl1.png')
@@ -163,6 +188,11 @@ if __name__ == '__main__':
             # РЕАКЦИЯ НА ОСТАЛЬНЫЕ СОБЫТИЯ
         # отрисовка и изменение свойств объектов
         all_sprites.update()
+        # изменяем ракурс камеры
+        camera.update(player)
+        # обновляем положение всех спрайтов
+        for sprite in all_sprites:
+            camera.apply(sprite)
         screen.fill('black')
         all_sprites.draw(screen)
         clock.tick(FPS)
