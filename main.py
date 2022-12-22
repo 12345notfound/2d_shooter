@@ -66,32 +66,36 @@ class Entity(pygame.sprite.Sprite):
         self.rect.centery = y
         # self.mask = pygame.mask.from_surface(self.image)
 
+        self.wall_rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.centery = y
+
         self.health = 10
         self.max_health = 10
         self.damage = 5
         self.direction = 0
 
     def move_entity(self, x, y):
-        start_x, start_y = self.rect.centerx, self.rect.centery
-        self.rect.centerx = start_x + x
-        self.rect.centery = start_y + y
+        start_x, start_y = self.wall_rect.centerx, self.wall_rect.centery
+        self.wall_rect.centerx = start_x + x
+        self.wall_rect.centery = start_y + y
         x_move, y_move, xy_move = True, True, True
         xshift = 0
         yshift = 0
         for wall in walls:
-            if pygame.sprite.collide_rect(self, wall):
+            if pygame.Rect.colliderect(self.wall_rect, wall):
                 xy_move = False
                 break
-        self.rect.centerx = start_x + x
-        self.rect.centery = start_y
+        self.wall_rect.centerx = start_x + x
+        self.wall_rect.centery = start_y
         for wall in walls:
-            if pygame.sprite.collide_rect(self, wall):
+            if pygame.Rect.colliderect(self.wall_rect, wall):
                 x_move = False
                 break
-        self.rect.centerx = start_x
-        self.rect.centery = start_y + y
+        self.wall_rect.centerx = start_x
+        self.wall_rect.centery = start_y + y
         for wall in walls:
-            if pygame.sprite.collide_rect(self, wall):
+            if pygame.Rect.colliderect(self.wall_rect, wall):
                 y_move = False
                 break
         if xy_move:
@@ -106,6 +110,8 @@ class Entity(pygame.sprite.Sprite):
         else:
             self.rect.centerx = start_x
             self.rect.centery = start_y
+        self.wall_rect.centerx = self.rect.centerx
+        self.wall_rect.centery = self.rect.centery
 
 
 
@@ -172,6 +178,9 @@ class Camera:
     def apply(self, obj):
         obj.rect.x += self.dx
         obj.rect.y += self.dy
+        if type(obj) == Bullet:
+            obj.float_x += self.dx
+            obj.float_y += self.dy
 
     # позиционировать камеру на объекте target
     def update(self, target):
@@ -212,6 +221,9 @@ if __name__ == '__main__':
         all_sprites.update()
         # изменяем ракурс камеры
         camera.update(player)
+        print(player.rect.center == player.wall_rect.center)
+        print(player.rect.w, player.wall_rect.w)
+
         # обновляем положение всех спрайтов
         for sprite in all_sprites:
             camera.apply(sprite)
