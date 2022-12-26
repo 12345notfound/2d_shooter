@@ -72,7 +72,7 @@ class Entity(pygame.sprite.Sprite):
 
     def move_entity(self, x, y):
         start_x, start_y = self.rect.centerx, self.rect.centery
-        self.rect = self.image.get_rect(size=(51, 51), center=self.rect.center)
+        self.rect = self.image.get_rect(size=(50, 50), center=self.rect.center)
         self.rect.centerx = start_x + x
         self.rect.centery = start_y + y
         x_move, y_move, xy_move = True, True, True
@@ -137,6 +137,11 @@ class Player(Entity):
             else:
                 turn = -degrees(turn)
             self.direction = turn
+        if pygame.mouse.get_pressed()[0]:
+            speed = 17
+            Bullet(self.rect.centerx - sin(radians(self.direction)) * speed * 3,
+                   self.rect.centery - cos(radians(self.direction)) * speed * 3, -sin(radians(self.direction)) * speed,
+                   -cos(radians(self.direction)) * speed, damage=10)
 
         self.move_entity(xshift, yshift)
         self.image = pygame.transform.rotate(im1, self.direction)
