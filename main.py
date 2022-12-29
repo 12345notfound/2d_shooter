@@ -54,6 +54,8 @@ class Bullet(pygame.sprite.Sprite):
         self.float_y += self.speedy
         self.rect.centerx = int(self.float_x)
         self.rect.centery = int(self.float_y)
+        if pygame.sprite.spritecollide(self, walls, False):
+            self.kill()
 
 
 class Entity(pygame.sprite.Sprite):
@@ -142,6 +144,11 @@ class Player(Entity):
             else:
                 turn = -degrees(turn)
             self.direction = turn
+        if pygame.mouse.get_pressed()[0]:
+            speed = 17
+            Bullet(self.rect.centerx - sin(radians(self.direction)) * speed * 3,
+                   self.rect.centery - cos(radians(self.direction)) * speed * 3, -sin(radians(self.direction)) * speed,
+                   -cos(radians(self.direction)) * speed, damage=10)
 
         self.move_entity(xshift, yshift)
         self.image = pygame.transform.rotate(im1, self.direction)
