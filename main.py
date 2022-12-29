@@ -2,7 +2,6 @@ import pygame
 import random
 from math import sin, radians, cos, asin, pi, degrees
 
-
 from PIL import Image
 
 
@@ -18,6 +17,26 @@ def pic_to_map(filename):
     return result
 
 
+class Weapon():
+    def __init__(self, speed, damage, frequency):
+        self.speed = speed
+        self.damage = damage
+        self.frequency = frequency
+        self.frequency_now = 0
+        self.spread = [1, -3, -1, 3, 2, -2, 0]
+        self.spread_now = 0
+
+    def update(self):
+        if self.frequency_now > 0:
+            self.frequency_now -= 1
+        if pygame.mouse.get_pressed()[0] and self.frequency_now == 0:
+            self.spread_now = (self.spread_now + 1) % len(self.spread)
+            turn = player.direction + self.spread[self.spread_now]
+            Bullet(player.rect.centerx - sin(radians(turn)) * self.speed * 3,
+                   player.rect.centery - cos(radians(turn)) * self.speed * 3,
+                   -sin(radians(turn)) * self.speed,
+                   -cos(radians(turn)) * self.speed, damage=self.damage)
+            self.frequency_now = self.frequency
 
 
 class LootBox(pygame.sprite.Sprite):
@@ -37,7 +56,7 @@ class Bullet(pygame.sprite.Sprite):
 
     def __init__(self, x, y, speed_x, speed_y, damage):
         super().__init__(all_sprites)
-        self.image = pygame.surface.Surface((20, 20))
+        self.image = pygame.surface.Surface((10, 10))
         self.image.fill((255, 255, 255))
         self.rect = self.image.get_rect()
         self.rect.centerx = x
@@ -50,8 +69,8 @@ class Bullet(pygame.sprite.Sprite):
         self.damage = damage  # урон
 
     def update(self):
-        self.float_x += self.speedx
-        self.float_y += self.speedy
+        self.float_x = self.rect.centerx + self.speedx + self.float_x - int(self.float_x)
+        self.float_y = self.rect.centery + self.speedy + self.float_y - int(self.float_y)
         self.rect.centerx = int(self.float_x)
         self.rect.centery = int(self.float_y)
         if pygame.sprite.spritecollide(self, walls, False):
@@ -112,7 +131,9 @@ class Entity(pygame.sprite.Sprite):
 
     def draw_health_bar(self, health_color, health):
         pygame.draw.rect(screen, width=1, rect=(self.rect.centerx - 26, self.rect.centery - 50, 52, 12), color='black')
-        pygame.draw.rect(screen, width=0, rect=(self.rect.centerx - 25, self.rect.centery - 49, int(50 * health / self.max_health), 10), color=health_color)
+        pygame.draw.rect(screen, width=0,
+                         rect=(self.rect.centerx - 25, self.rect.centery - 49, int(50 * health / self.max_health), 10),
+                         color=health_color)
 
 
 class Player(Entity):
@@ -137,19 +158,13 @@ class Player(Entity):
         mouse_x = pygame.mouse.get_pos()[0]
         mouse_y = pygame.mouse.get_pos()[1]
         if self.rect.centery != mouse_y or self.rect.centerx != mouse_x:
-            turn = pi / 2 - asin(((self.rect.centery - mouse_y) / (
+            self.turn = pi / 2 - asin(((self.rect.centery - mouse_y) / (
                     (self.rect.centerx - mouse_x) ** 2 + (self.rect.centery - mouse_y) ** 2) ** 0.5))
             if self.rect.centerx > mouse_x:
-                turn = degrees(turn)
+                self.turn = degrees(self.turn)
             else:
-                turn = -degrees(turn)
-            self.direction = turn
-        if pygame.mouse.get_pressed()[0]:
-            speed = 17
-            Bullet(self.rect.centerx - sin(radians(self.direction)) * speed * 3,
-                   self.rect.centery - cos(radians(self.direction)) * speed * 3, -sin(radians(self.direction)) * speed,
-                   -cos(radians(self.direction)) * speed, damage=10)
-
+                self.turn = -degrees(self.turn)
+            self.direction = self.turn
         self.move_entity(xshift, yshift)
         self.image = pygame.transform.rotate(im1, self.direction)
         self.rect = self.image.get_rect(center=self.rect.center)
@@ -192,6 +207,7 @@ if __name__ == '__main__':
     walls = pygame.sprite.Group()
     all_sprites = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
+    weapon = Weapon(50, 10, 50)#снайперская винтовка
     running = True
     # test1
     Bullet(10, 10, 1.4, 3.8, damage=10)
@@ -217,6 +233,7 @@ if __name__ == '__main__':
         # изменяем ракурс камеры
         camera.update(player)
         # обновляем положение всех спрайтов
+        weapon.update()
         for sprite in all_sprites:
             camera.apply(sprite)
         screen.fill('black')
