@@ -145,13 +145,6 @@ class Player(Entity):
 
         self.move_entity(xshift, yshift)
         self.image = pygame.transform.rotate(im1, self.direction)
-        # self.mask = pygame.mask.from_surface(self.image)
-        # for wall in walls:
-        #     if pygame.sprite.collide_rect(self, wall):
-        #         self.direction -= turn
-        #         self.image = pygame.transform.rotate(im1, self.direction)
-        #         # self.mask = pygame.mask.from_surface(self.image)
-        #         break
         self.rect = self.image.get_rect(center=self.rect.center)
 
 
