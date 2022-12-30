@@ -17,8 +17,8 @@ def pic_to_map(filename):
     return result
 
 
-class Weapon():
-    def __init__(self, speed, damage, frequency):
+class Weapon:
+    def __init__(self, speed, damage, frequency, clip_size, ammo, reload_time):
         self.speed = speed
         self.damage = damage
         self.frequency = frequency
@@ -26,17 +26,57 @@ class Weapon():
         self.spread = [1, -3, -1, 3, 2, -2, 0]
         self.spread_now = 0
 
+        self.interface_image = sniper_rifle_image
+        self.clip_size = clip_size  # размер магазина
+        self.clip = 5  # кол-во патронов в магазине
+        self.ammo = ammo  # кол-во патронов вне магазина
+        self.reload_time = reload_time  # время перезарядки (в мс)
+        self.reload_progress = self.reload_time
+
     def update(self):
-        if self.frequency_now > 0:
-            self.frequency_now -= 1
-        if pygame.mouse.get_pressed()[0] and self.frequency_now == 0:
-            self.spread_now = (self.spread_now + 1) % len(self.spread)
-            turn = player.direction + self.spread[self.spread_now]
-            Bullet(player.rect.centerx - sin(radians(turn)) * self.speed * 3,
-                   player.rect.centery - cos(radians(turn)) * self.speed * 3,
-                   -sin(radians(turn)) * self.speed,
-                   -cos(radians(turn)) * self.speed, damage=self.damage)
-            self.frequency_now = self.frequency
+        if self.reload_progress < self.reload_time:
+            self.reload_progress += 1
+            if self.reload_progress == self.reload_time:
+                prev_ammo = self.clip
+                self.clip = min(self.clip_size, self.ammo + self.clip)
+                self.ammo -= self.clip - prev_ammo
+        else:
+            if self.frequency_now > 0:
+                self.frequency_now -= 1
+            if pygame.mouse.get_pressed()[0] and self.frequency_now == 0:
+                # стрельба
+                self.spread_now = (self.spread_now + 1) % len(self.spread)
+                turn = player.direction + self.spread[self.spread_now]
+                Bullet(player.rect.centerx - sin(radians(turn)) * self.speed * 3,
+                       player.rect.centery - cos(radians(turn)) * self.speed * 3,
+                       -sin(radians(turn)) * self.speed,
+                       -cos(radians(turn)) * self.speed, damage=self.damage)
+                self.frequency_now = self.frequency
+                self.clip -= 1
+                # перезарядка если пуль не осталось
+                if self.clip == 0:
+                    self.reload_progress = 0
+            # перезарядка по кнопке R
+            if pygame.key.get_pressed()[pygame.K_r] and self.reload_progress == self.reload_time and self.clip != self.clip_size:
+                self.reload_progress = 0
+
+    def draw_interface(self):
+        """Отрисовка интерфейса оружия"""
+        self.font = pygame.font.Font(None, 30)
+        self.ammo_str = self.font.render(str(self.clip) + ' / ' + str(self.ammo), True, (255, 0, 0))
+        screen.blit(self.ammo_str, (int(width * 0.90), int(height * 0.80)))
+        pygame.draw.rect(screen, width=1, rect=(int(width * 0.90), int(height * 0.85),
+                                                52, 12), color='grey')
+        pygame.draw.rect(screen, width=0, rect=(int(width * 0.90) + 1, int(height * 0.85) + 1,
+                                                int(50 * self.reload_progress / self.reload_time), 10), color=(255, 0, 0))
+        screen.blit(self.interface_image, (int(width * 0.6), int(height * 0.7)))
+
+
+class SniperRifle(Weapon):
+    def __init__(self):
+        super().__init__(speed=50, damage=10, frequency=50,
+                         clip_size=5, ammo=15, reload_time=3 * FPS)
+        self.interface_image = sniper_rifle_image
 
 
 class LootBox(pygame.sprite.Sprite):
@@ -52,7 +92,7 @@ class LootBox(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    """Класс стены"""
+    """Класс пули"""
 
     def __init__(self, x, y, speed_x, speed_y, damage):
         super().__init__(all_sprites)
@@ -93,6 +133,7 @@ class Entity(pygame.sprite.Sprite):
         self.direction = 0
 
     def move_entity(self, x, y):
+        """Переместить сущность на координаты х, y"""
         start_x, start_y = self.rect.centerx, self.rect.centery
         self.rect = self.image.get_rect(size=(50, 50), center=self.rect.center)
         self.rect.centerx = start_x + x
@@ -199,6 +240,7 @@ class Camera:
 
 
 if __name__ == '__main__':
+
     FPS = 60
     pygame.init()
     size = width, height = 1400, 700
@@ -207,14 +249,19 @@ if __name__ == '__main__':
     walls = pygame.sprite.Group()
     all_sprites = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
-    weapon = Weapon(50, 10, 50)#снайперская винтовка
+
+    sniper_rifle_image = pygame.image.load('sniper_rifle.png').convert()
+    sniper_rifle_image.set_colorkey((255, 255, 255))
+    im1 = pygame.image.load('circle.png').convert()
+    im1.set_colorkey((255, 255, 255))
+
+    weapon = SniperRifle()  # снайперская винтовка
     running = True
     # test1
     Bullet(10, 10, 1.4, 3.8, damage=10)
     LootBox(30, 30)
     camera = Camera()
-    im1 = pygame.image.load('circle.png').convert()
-    im1.set_colorkey((255, 255, 255))
+
     player = Player(550, 550)
     # w1 = Wall(300, 300)
     # Wall(300, 400)
@@ -239,6 +286,9 @@ if __name__ == '__main__':
         screen.fill('black')
         all_sprites.draw(screen)
         player.draw_health_bar('green', player.health)
+
+        weapon.draw_interface()
+
         clock.tick(FPS)
         pygame.display.flip()
     pygame.quit()
