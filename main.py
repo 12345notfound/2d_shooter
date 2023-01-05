@@ -102,15 +102,38 @@ class LootBox(pygame.sprite.Sprite):
     """Класс ящика с улучшениями"""
 
     def __init__(self, x, y):
-        super().__init__(all_sprites, other_sprites)
+        super().__init__(all_sprites, other_sprites, lootboxes)
         self.image = pygame.surface.Surface((50, 50))
         self.image.fill((192, 0, 192))
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
+        self.timer = 0
+        self.open_time = 60
 
     def update(self):
         pass
+
+    def use(self):
+        weapon.ammo += 50
+        self.kill()
+
+    def reset_timer(self):
+        self.timer = 0
+
+    def add_timer(self):
+        self.timer += 1
+        if self.timer == self.open_time:
+            self.use()
+
+    def draw_open_progress(self):
+        if self.timer != 0:
+            pygame.draw.rect(screen, width=1, rect=(
+            self.rect.centerx - 25, self.rect.centery - 75, 52, 12), color='red')
+            pygame.draw.rect(screen, width=0,
+                             rect=(self.rect.centerx - 26, self.rect.centery - 74,
+                                   int(50 * self.timer / self.open_time), 10),
+                             color='yellow')
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -213,6 +236,8 @@ class Entity(pygame.sprite.Sprite):
 class Player(Entity):
     def __init__(self, x, y):
         super().__init__(x, y)
+        self.weapon_list = [SniperRifle(player), Ak_47(player)]
+        self.current_weapon = 0
 
     def update(self):
         xshift = 0
@@ -243,6 +268,12 @@ class Player(Entity):
         self.move_entity(xshift, yshift)
         self.image = pygame.transform.rotate(im1, self.direction)
         self.rect = self.image.get_rect(center=self.rect.center)
+
+        for lootbox in lootboxes:
+            if pygame.sprite.collide_rect(self, lootbox) and keystate[pygame.K_f]:
+                lootbox.add_timer()
+            else:
+                lootbox.reset_timer()
 
 
 class Enemy(Entity):
@@ -311,7 +342,7 @@ if __name__ == '__main__':
     other_sprites = pygame.sprite.Group()  # все остальное
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
-
+    lootboxes = pygame.sprite.Group()  # ящики
     sniper_rifle_image = pygame.image.load('sniper_rifle.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
     im1 = pygame.image.load('Игрок_2.png').convert()
@@ -320,7 +351,7 @@ if __name__ == '__main__':
     running = True
     # test1
     Bullet(10, 10, 1.4, 3.8, damage=10)
-    LootBox(30, 30)
+    LootBox(200, 200)
     camera = Camera()
 
     player = Player(550, 550)
@@ -365,6 +396,8 @@ if __name__ == '__main__':
         # all_sprites.draw(screen)
         # characters.draw(screen)
         player.draw_health_bar('green', player.health)
+        for lootbox in lootboxes:
+            lootbox.draw_open_progress()
 
         weapon.draw_interface()
 
