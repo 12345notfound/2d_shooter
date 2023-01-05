@@ -50,7 +50,7 @@ class Weapon:
                         self.spread_now += 1
                     if player.movement:
                         self.spread_now += 2
-                    print(self.spread_now)
+                    # print(self.spread_now)
                     # стрельба
                     turn = self.who.direction + random.randint(-self.spread_now, self.spread_now)
                     Bullet(self.who.rect.centerx - sin(radians(turn)) * 50,
@@ -75,10 +75,10 @@ class Weapon:
         """Отрисовка интерфейса оружия"""
         self.font = pygame.font.Font(None, 30)
         self.ammo_str = self.font.render(str(self.clip) + ' / ' + str(self.ammo), True, (255, 0, 0))
-        screen.blit(self.ammo_str, (int(width * 0.90), int(height * 0.80)))
-        pygame.draw.rect(screen, width=1, rect=(int(width * 0.90), int(height * 0.85),
+        screen.blit(self.ammo_str, (int(width * 0.85), int(height * 0.80)))
+        pygame.draw.rect(screen, width=1, rect=(int(width * 0.85), int(height * 0.85),
                                                 52, 12), color='grey')
-        pygame.draw.rect(screen, width=0, rect=(int(width * 0.90) + 1, int(height * 0.85) + 1,
+        pygame.draw.rect(screen, width=0, rect=(int(width * 0.85) + 1, int(height * 0.85) + 1,
                                                 int(50 * self.reload_progress / self.reload_time), 10),
                          color=(255, 0, 0))
         screen.blit(self.interface_image, (int(width * 0.6), int(height * 0.7)))
@@ -95,7 +95,7 @@ class Ak_47(Weapon):
     def __init__(self, whose):
         super().__init__(speed=50, damage=10, frequency=5,
                          clip_size=1000, ammo=100, who=whose, reload_time=3 * FPS, queue=15)
-        self.interface_image = sniper_rifle_image
+        self.interface_image = ak_47_image
 
 
 class LootBox(pygame.sprite.Sprite):
@@ -115,7 +115,7 @@ class LootBox(pygame.sprite.Sprite):
         pass
 
     def use(self):
-        weapon.ammo += 50
+        player.get_current_weapon().ammo += 50
         self.kill()
 
     def reset_timer(self):
@@ -236,8 +236,11 @@ class Entity(pygame.sprite.Sprite):
 class Player(Entity):
     def __init__(self, x, y):
         super().__init__(x, y)
-        self.weapon_list = [SniperRifle(player), Ak_47(player)]
-        self.current_weapon = 0
+        self.weapon_list = [SniperRifle(self), Ak_47(self)]
+        self.current_weapon = 1
+
+    def get_current_weapon(self):
+        return self.weapon_list[self.current_weapon]
 
     def update(self):
         xshift = 0
@@ -268,12 +271,22 @@ class Player(Entity):
         self.move_entity(xshift, yshift)
         self.image = pygame.transform.rotate(im1, self.direction)
         self.rect = self.image.get_rect(center=self.rect.center)
-
+        # проверка, есть ли рядом ящики
         for lootbox in lootboxes:
             if pygame.sprite.collide_rect(self, lootbox) and keystate[pygame.K_f]:
                 lootbox.add_timer()
             else:
                 lootbox.reset_timer()
+
+        # проверка на смену оружия
+        if keystate[pygame.K_1]:
+            if self.current_weapon != 0 and self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time:
+                self.get_current_weapon().reload_progress = 0
+            self.current_weapon = 0
+        elif keystate[pygame.K_2]:
+            if self.current_weapon != 1 and self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time:
+                self.get_current_weapon().reload_progress = 0
+            self.current_weapon = 1
 
 
 class Enemy(Entity):
@@ -343,8 +356,11 @@ if __name__ == '__main__':
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     lootboxes = pygame.sprite.Group()  # ящики
-    sniper_rifle_image = pygame.image.load('sniper_rifle.png').convert()
+
+    sniper_rifle_image = pygame.image.load('sniper_rifle2.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
+    ak_47_image = pygame.image.load('ak_47_image.png').convert()
+    ak_47_image.set_colorkey((255, 255, 255))
     im1 = pygame.image.load('Игрок_2.png').convert()
     im1.set_colorkey((255, 255, 255))
 
@@ -355,7 +371,7 @@ if __name__ == '__main__':
     camera = Camera()
 
     player = Player(550, 550)
-    weapon = Ak_47(player)  # снайперская винтовка
+    # weapon = Ak_47(player)  # снайперская винтовка
     enemy1 = Enemy(90, 90)
     # w1 = Wall(300, 300)
     # Wall(300, 400)
@@ -371,7 +387,7 @@ if __name__ == '__main__':
             # РЕАКЦИЯ НА ОСТАЛЬНЫЕ СОБЫТИЯ
         # отрисовка и изменение свойств объектов
         # characters.update()
-        weapon.update()
+        player.get_current_weapon().update()
         characters.update()
         camera.update(player)
         for sprite in all_sprites:
@@ -399,7 +415,7 @@ if __name__ == '__main__':
         for lootbox in lootboxes:
             lootbox.draw_open_progress()
 
-        weapon.draw_interface()
+        player.get_current_weapon().draw_interface()
 
         clock.tick(FPS)
         pygame.display.flip()
