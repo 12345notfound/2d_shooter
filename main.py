@@ -74,14 +74,14 @@ class Weapon:
     def draw_interface(self):
         """Отрисовка интерфейса оружия"""
         self.font = pygame.font.Font(None, 30)
-        self.ammo_str = self.font.render(str(self.clip) + ' / ' + str(self.ammo), True, (255, 0, 0))
-        screen.blit(self.ammo_str, (int(width * 0.85), int(height * 0.80)))
-        pygame.draw.rect(screen, width=1, rect=(int(width * 0.85), int(height * 0.85),
+        self.ammo_str = self.font.render(str(self.clip) + ' / ' + str(self.ammo), True, (255, 255, 255))
+        screen.blit(self.ammo_str, (int(width * 0.79), int(height * 0.8)))
+        pygame.draw.rect(screen, width=1, rect=(int(width * 0.808), int(height * 0.85),
                                                 52, 12), color='grey')
-        pygame.draw.rect(screen, width=0, rect=(int(width * 0.85) + 1, int(height * 0.85) + 1,
+        pygame.draw.rect(screen, width=0, rect=(int(width * 0.808) + 1, int(height * 0.85) + 1,
                                                 int(50 * self.reload_progress / self.reload_time), 10),
-                         color=(255, 0, 0))
-        screen.blit(self.interface_image, (int(width * 0.6), int(height * 0.7)))
+                         color=(255, 255, 255))
+        screen.blit(self.interface_image, (int(width * 0.67), int(height * 0.785)))
 
 
 class SniperRifle(Weapon):
@@ -96,6 +96,31 @@ class Ak_47(Weapon):
         super().__init__(speed=50, damage=10, frequency=5,
                          clip_size=1000, ammo=100, who=whose, reload_time=3 * FPS, queue=15)
         self.interface_image = ak_47_image
+
+
+class Knife:
+    def __init__(self, whose):
+        self.damage = 20
+        self.frequency = 1
+        self.frequency_now = 0
+        self.range_squared = 4900
+        self.interface_image = knife_image
+
+    def update(self):
+        if pygame.mouse.get_pressed()[0]:
+            min_dist = 1000000000000  # очень большая константа
+            nearest_enemy = None  # ближайший враг
+            for enemy in enemies:
+                if (player.rect.centerx - enemy.rect.centerx) ** 2 + (player.rect.centery - enemy.rect.centery) ** 2 < min_dist:
+                    min_dist = (player.rect.centerx - enemy.rect.centerx) ** 2 + (player.rect.centery - enemy.rect.centery) ** 2
+                    nearest_enemy = enemy
+                if (player.rect.centerx - nearest_enemy.rect.centerx) ** 2\
+                    + (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 <= self.range_squared:
+                    nearest_enemy.take_damage(self.damage)
+
+    def draw_interface(self):
+        """Отрисовка интерфейса оружия"""
+        screen.blit(self.interface_image, (int(width * 0.67), int(height * 0.785)))
 
 
 class LootBox(pygame.sprite.Sprite):
@@ -134,6 +159,15 @@ class LootBox(pygame.sprite.Sprite):
                              rect=(self.rect.centerx - 26, self.rect.centery - 74,
                                    int(50 * self.timer / self.open_time), 10),
                              color='yellow')
+
+
+class MedkitLootbox(LootBox):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+
+    def use(self):
+        player.medkits += 1
+        self.kill()
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -181,6 +215,11 @@ class Entity(pygame.sprite.Sprite):
         self.max_health = 10
         self.damage = 5
         self.direction = 0
+
+    def take_damage(self, damage):
+        self.health -= damage
+        if self.health <= 0:
+            self.kill()
 
     def move_entity(self, x, y):
         """Переместить сущность на координаты х, y"""
@@ -236,11 +275,24 @@ class Entity(pygame.sprite.Sprite):
 class Player(Entity):
     def __init__(self, x, y):
         super().__init__(x, y)
-        self.weapon_list = [SniperRifle(self), Ak_47(self)]
+        self.weapon_list = [SniperRifle(self), Ak_47(self), Knife(self)]
         self.current_weapon = 1
+        self.medkits = 0
 
     def get_current_weapon(self):
+        """Возвращает текущее оружие игрока"""
         return self.weapon_list[self.current_weapon]
+
+    def heal(self):
+        """Использование игроком аптечки"""
+        self.health = min(self.max_health, self.health + int(self.max_health * 0.2))
+
+    def draw_interface(self):
+        """Отрисовка интерфейса игрока"""
+        self.font = pygame.font.Font(None, 30)
+        self.ammo_str = self.font.render(str(self.medkits), True, (255, 255, 255))
+        screen.blit(self.ammo_str, (int(width * 0.88), int(height * 0.80)))
+        self.get_current_weapon().draw_interface()
 
     def update(self):
         xshift = 0
@@ -287,11 +339,21 @@ class Player(Entity):
             if self.current_weapon != 1 and self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time:
                 self.get_current_weapon().reload_progress = 0
             self.current_weapon = 1
+        elif keystate[pygame.K_3]:
+            if self.current_weapon != 2 and self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time:
+                self.get_current_weapon().reload_progress = 0
+            self.current_weapon = 2
+
+        # проверка на аптечку
+        if keystate[pygame.K_4] and self.medkits != 0:
+            self.medkits -= 1
+            self.heal()
 
 
 class Enemy(Entity):
     def __init__(self, x, y):
         super().__init__(x, y)
+        enemies.add(self)
 
     def update(self):
         xshift = 0
@@ -316,7 +378,7 @@ class Wall(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__(all_sprites, walls)
         self.image = pygame.surface.Surface((100, 100))
-        self.image.fill((255, 255, 255))
+        self.image.fill((128, 128, 128))
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
@@ -350,31 +412,33 @@ if __name__ == '__main__':
     size = width, height = 1400, 700
     screen = pygame.display.set_mode(size)
     clock = pygame.time.Clock()
+    pygame.mouse.set_visible(True)  # False на релизе
+
     walls = pygame.sprite.Group()  # стены
     characters = pygame.sprite.Group()  # персонажи
     other_sprites = pygame.sprite.Group()  # все остальное
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     lootboxes = pygame.sprite.Group()  # ящики
+    enemies = pygame.sprite.Group()
 
     sniper_rifle_image = pygame.image.load('sniper_rifle2.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
-    ak_47_image = pygame.image.load('ak_47_image.png').convert()
+    ak_47_image = pygame.image.load('ak_47_image2.png').convert()
     ak_47_image.set_colorkey((255, 255, 255))
     im1 = pygame.image.load('Игрок_2.png').convert()
     im1.set_colorkey((255, 255, 255))
+    knife_image = pygame.image.load('knife_image.png').convert()
+    knife_image.set_colorkey((255, 255, 255))
 
     running = True
-    # test1
     Bullet(10, 10, 1.4, 3.8, damage=10)
-    LootBox(200, 200)
+    # LootBox(200, 200)
+    MedkitLootbox(500, 500)
     camera = Camera()
 
     player = Player(550, 550)
-    # weapon = Ak_47(player)  # снайперская винтовка
     enemy1 = Enemy(90, 90)
-    # w1 = Wall(300, 300)
-    # Wall(300, 400)
     pic_to_map('lvl1.png')
 
     while running:
@@ -415,8 +479,7 @@ if __name__ == '__main__':
         for lootbox in lootboxes:
             lootbox.draw_open_progress()
 
-        player.get_current_weapon().draw_interface()
-
+        player.draw_interface()
         clock.tick(FPS)
         pygame.display.flip()
     pygame.quit()
