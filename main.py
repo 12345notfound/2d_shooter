@@ -103,7 +103,7 @@ class Knife:
         self.damage = 20
         self.frequency = 1
         self.frequency_now = 0
-        self.range_squared = 4900
+        self.range_squared = 4000
         self.interface_image = knife_image
 
     def update(self):
@@ -332,11 +332,11 @@ class Player(Entity):
 
         # проверка на смену оружия
         if keystate[pygame.K_1]:
-            if self.current_weapon != 0 and self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time:
+            if self.current_weapon != 0 and (type(self.get_current_weapon()) == Knife or self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
                 self.get_current_weapon().reload_progress = 0
             self.current_weapon = 0
         elif keystate[pygame.K_2]:
-            if self.current_weapon != 1 and self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time:
+            if self.current_weapon != 1 and (type(self.get_current_weapon()) == Knife or self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
                 self.get_current_weapon().reload_progress = 0
             self.current_weapon = 1
         elif keystate[pygame.K_3]:
