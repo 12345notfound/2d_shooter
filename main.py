@@ -103,7 +103,7 @@ class Knife:
         self.damage = 20
         self.frequency = 1
         self.frequency_now = 0
-        self.range_squared = 4000
+        self.range_squared = 4900
         self.interface_image = knife_image
 
     def update(self):
@@ -116,9 +116,9 @@ class Knife:
                     min_dist = (player.rect.centerx - enemy.rect.centerx) ** 2 + (
                                 player.rect.centery - enemy.rect.centery) ** 2
                     nearest_enemy = enemy
-                if (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 \
-                        + (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 <= self.range_squared:
-                    nearest_enemy.take_damage(self.damage)
+            if nearest_enemy is not None and (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 \
+                    + (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 <= self.range_squared:
+                nearest_enemy.take_damage(self.damage)
 
     def draw_interface(self):
         """Отрисовка интерфейса оружия"""
@@ -359,6 +359,7 @@ class Player(Entity):
 class Enemy(Entity):
     def __init__(self, x, y, trajectory, speed=2):
         super().__init__(x, y)
+        enemies.add(self)
         self.trajectory = trajectory  # путь
         self.trajectory_pos = 0
         self.detection = False  # видит ли игрока
