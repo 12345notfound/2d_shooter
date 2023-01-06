@@ -467,14 +467,6 @@ if __name__ == '__main__':
         bullets.update()
         bullets.draw(screen)
 
-        # all_sprites.update()
-        # player.rect =player.image.get_rect(size=(80, 80), center=player.rect.center)       # изменяем ракурс камеры
-        # camera.update(player)
-        # обновляем положение всех спрайтов
-        # for sprite in all_sprites:
-        # camera.apply(sprite)
-        # all_sprites.draw(screen)
-        # characters.draw(screen)
         player.draw_health_bar('green', player.health)
         for lootbox in lootboxes:
             lootbox.draw_open_progress()
