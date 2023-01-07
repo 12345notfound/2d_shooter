@@ -292,6 +292,7 @@ class Player(Entity):
         self.weapon_list = [SniperRifle(self), Ak_47(self), Knife(self)]
         self.current_weapon = 1
         self.medkits = 0
+        self.range = 15000
 
     def get_current_weapon(self):
         """Возвращает текущее оружие игрока"""
@@ -307,6 +308,30 @@ class Player(Entity):
         self.ammo_str = self.font.render(str(self.medkits), True, (255, 255, 255))
         screen.blit(self.ammo_str, (int(width * 0.88), int(height * 0.80)))
         self.get_current_weapon().draw_interface()
+
+    def get_nearest_door(self):
+        min_dist = 1000000000000  # очень большая константа
+        nearest_door = None  # ближайшая дверь
+        for door in doors:
+            if (player.rect.centerx - door.rect.centerx) ** 2 + (
+                    player.rect.centery - door.rect.centery) ** 2 < min_dist:
+                min_dist = (
+                                   player.rect.centerx - door.rect.centerx) ** 2 + (
+                                   player.rect.centery - door.rect.centery) ** 2
+                nearest_door = door
+        return nearest_door
+
+    def get_nearest_lootbox(self):
+        min_dist = 1000000000000  # очень большая константа
+        nearest_lootbox = None  # ближайшая коробка
+        for lootbox in lootboxes:
+            if (player.rect.centerx - lootbox.rect.centerx) ** 2 + (
+                    player.rect.centery - lootbox.rect.centery) ** 2 < min_dist:
+                min_dist = (
+                                   player.rect.centerx - lootbox.rect.centerx) ** 2 + (
+                                   player.rect.centery - lootbox.rect.centery) ** 2
+                nearest_lootbox = lootbox
+        return nearest_lootbox
 
     def update(self):
         xshift = 0
@@ -330,11 +355,11 @@ class Player(Entity):
         self.image = pygame.transform.rotate(im1, self.direction)
         self.rect = self.image.get_rect(center=self.rect.center)
         # проверка, есть ли рядом ящики
-        for lootbox in lootboxes:
-            if pygame.sprite.collide_rect(self, lootbox) and keystate[pygame.K_f]:
-                lootbox.add_timer()
-            else:
-                lootbox.reset_timer()
+        # for lootbox in lootboxes:
+        #     if pygame.sprite.collide_rect(self, lootbox) and keystate[pygame.K_f]:
+        #         lootbox.add_timer()
+        #     else:
+        #         lootbox.reset_timer()
 
         # проверка на смену оружия
         if keystate[pygame.K_1]:
@@ -354,6 +379,45 @@ class Player(Entity):
         if keystate[pygame.K_4] and self.medkits != 0:
             self.medkits -= 1
             self.heal()
+
+        # проверка на дверь
+        # if keystate[pygame.K_x]:
+        #     min_dist = 1000000000000  # очень большая константа
+        #     nearest_door = None  # ближайшая дверь
+        #     for door in doors:
+        #         if (player.rect.centerx - door.rect.centerx) ** 2 + (
+        #                 player.rect.centery - door.rect.centery) ** 2 < min_dist:
+        #             min_dist = (
+        #                                    player.rect.centerx - door.rect.centerx) ** 2 + (
+        #                                player.rect.centery - door.rect.centery) ** 2
+        #             nearest_door = door
+        #     if nearest_door is not None and (
+        #             player.rect.centerx - nearest_door.rect.centerx) ** 2 \
+        #             + (
+        #             player.rect.centerx - nearest_door.rect.centerx) ** 2 <= 4000:
+        #         nearest_door.use()
+        if keystate[pygame.K_f]:
+            nearest_door = self.get_nearest_door()
+            nearest_lootbox = self.get_nearest_lootbox()
+            door_dist_sq = (player.rect.centerx - nearest_door.rect.centerx) ** 2 + (
+                        player.rect.centery - nearest_door.rect.centery) ** 2 if nearest_door is not None else 1000000000
+            lootbox_dist_sq = (player.rect.centerx - nearest_lootbox.rect.centerx) ** 2 + (
+                        player.rect.centery - nearest_lootbox.rect.centery) ** 2 if nearest_lootbox is not None else 1000000000
+            min_dist = min(door_dist_sq, lootbox_dist_sq)
+            if min_dist <= self.range:
+                if min_dist == door_dist_sq:
+                    nearest_door.use()
+                elif min_dist == lootbox_dist_sq:
+                    nearest_lootbox.add_timer()
+
+            for lootbox in lootboxes:
+                if lootbox != nearest_lootbox:
+                    lootbox.reset_timer()
+                elif lootbox_dist_sq > self.range:
+                    lootbox.reset_timer()
+        else:
+            for lootbox in lootboxes:
+                lootbox.reset_timer()
 
 
 class Enemy(Entity):
@@ -433,6 +497,40 @@ class Wall(pygame.sprite.Sprite):
         pass
 
 
+class Door(pygame.sprite.Sprite):
+    def __init__(self, x, y, direction):
+        super().__init__(all_sprites, doors, walls)
+        self.image = pygame.Surface((10, 100))
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        self.image.fill((128, 0, 0))
+        self.direction = direction
+        self.is_open = False
+        self.max_delay = FPS
+        self.delay = self.max_delay
+
+    def use(self):
+        if self.delay == 0:
+            if self.is_open:
+                self.is_open = False
+                walls.add(self)
+            else:
+                self.is_open = True
+                walls.remove(self)
+            self.change_image()
+            self.delay = self.max_delay
+
+    def change_image(self):
+        if self.is_open:
+            self.image.fill((0, 128, 0))
+        else:
+            self.image.fill((128, 0, 0))
+
+    def update(self):
+        if self.delay != 0:
+            self.delay -= 1
+
+
 class Camera:
     # зададим начальный сдвиг камеры
     def __init__(self):
@@ -466,6 +564,7 @@ if __name__ == '__main__':
     bullets = pygame.sprite.Group()
     lootboxes = pygame.sprite.Group()  # ящики
     enemies = pygame.sprite.Group()
+    doors = pygame.sprite.Group()
 
     sniper_rifle_image = pygame.image.load('sniper_rifle2.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
@@ -480,6 +579,8 @@ if __name__ == '__main__':
     Bullet(10, 10, 1.4, 3.8, damage=10)
     # LootBox(200, 200)
     MedkitLootbox(500, 500)
+    MedkitLootbox(500, 700)
+    Door(400, 200, 0)
     camera = Camera()
     enemy1 = Enemy(100, 100, [['go', 100, 100], ['go', 100, 200], ['go', 500, 200], ['go', 100, 200],
                               ['stop', 100], ['go', 100, 100]])
@@ -508,6 +609,8 @@ if __name__ == '__main__':
         characters.draw(screen)
         other_sprites.draw(screen)
         walls.draw(screen)
+        doors.draw(screen)
+        doors.update()
         for i in characters:
             i.rect = i.image.get_rect(size=(65, 65), center=i.rect.center)
         bullets.update()
