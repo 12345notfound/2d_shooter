@@ -114,7 +114,7 @@ class Knife:
                 if (player.rect.centerx - enemy.rect.centerx) ** 2 + (
                         player.rect.centery - enemy.rect.centery) ** 2 < min_dist:
                     min_dist = (player.rect.centerx - enemy.rect.centerx) ** 2 + (
-                                player.rect.centery - enemy.rect.centery) ** 2
+                            player.rect.centery - enemy.rect.centery) ** 2
                     nearest_enemy = enemy
             if nearest_enemy is not None and (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 \
                     + (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 <= self.range_squared:
@@ -190,13 +190,13 @@ class Bullet(pygame.sprite.Sprite):
         self.damage = damage  # урон
 
     def update(self):
-        self.float_x = self.rect.centerx + self.speedx / 30 + self.float_x - int(self.float_x)
-        self.float_y = self.rect.centery + self.speedy / 30 + self.float_y - int(self.float_y)
+        self.float_x = self.rect.centerx + self.speedx / 50 + self.float_x - int(self.float_x)
+        self.float_y = self.rect.centery + self.speedy / 50 + self.float_y - int(self.float_y)
         self.rect.centerx = int(self.float_x)
         self.rect.centery = int(self.float_y)
-        for _ in range(29):
-            self.float_x += self.speedx / 30
-            self.float_y += self.speedy / 30
+        for _ in range(49):
+            self.float_x += self.speedx / 50
+            self.float_y += self.speedy / 50
             self.rect.centerx = int(self.float_x)
             self.rect.centery = int(self.float_y)
             if pygame.sprite.spritecollide(self, walls, False) or pygame.sprite.spritecollide(self, characters, False):
@@ -285,6 +285,26 @@ class Entity(pygame.sprite.Sprite):
             return 0
         return turn
 
+    def beam(self, x_start, y_start, x_end, y_end):
+        accuracy = 100
+        x_speed = (x_end - x_start) / accuracy
+        y_speed = (y_end - y_start) / accuracy
+        dist = accuracy
+        for i in range(1, accuracy + 1):
+            x, y = int(x_start + x_speed * i), int(y_start + y_speed * i)
+            for j in walls:
+                if j.rect.colliderect(pygame.Rect((x, y, 1, 1))):
+                    print(1)
+                    dist = i
+                    break
+            if dist != accuracy:
+                break
+        pygame.draw.line(screen, pygame.Color('red'), (x_start, y_start),
+                         (int(x_start + x_speed * dist), int(y_start + y_speed * dist)))
+        if dist != accuracy:
+            return False
+        return True
+
 
 class Player(Entity):
     def __init__(self, x, y):
@@ -349,7 +369,7 @@ class Player(Entity):
 
             # поворот персонажа к курсору
         self.direction = self.determining_angle(self.rect.centerx, self.rect.centery, pygame.mouse.get_pos()[0],
-                                                    pygame.mouse.get_pos()[1])
+                                                pygame.mouse.get_pos()[1])
         self.movement = False
         self.move_entity(xshift, yshift)
         self.image = pygame.transform.rotate(im1, self.direction)
@@ -363,11 +383,15 @@ class Player(Entity):
 
         # проверка на смену оружия
         if keystate[pygame.K_1]:
-            if self.current_weapon != 0 and (type(self.get_current_weapon()) == Knife or self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
+            if self.current_weapon != 0 and (
+                    type(
+                        self.get_current_weapon()) == Knife or self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
                 self.get_current_weapon().reload_progress = 0
             self.current_weapon = 0
         elif keystate[pygame.K_2]:
-            if self.current_weapon != 1 and (type(self.get_current_weapon()) == Knife or self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
+            if self.current_weapon != 1 and (
+                    type(
+                        self.get_current_weapon()) == Knife or self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
                 self.get_current_weapon().reload_progress = 0
             self.current_weapon = 1
         elif keystate[pygame.K_3]:
@@ -400,9 +424,9 @@ class Player(Entity):
             nearest_door = self.get_nearest_door()
             nearest_lootbox = self.get_nearest_lootbox()
             door_dist_sq = (player.rect.centerx - nearest_door.rect.centerx) ** 2 + (
-                        player.rect.centery - nearest_door.rect.centery) ** 2 if nearest_door is not None else 1000000000
+                    player.rect.centery - nearest_door.rect.centery) ** 2 if nearest_door is not None else 1000000000
             lootbox_dist_sq = (player.rect.centerx - nearest_lootbox.rect.centerx) ** 2 + (
-                        player.rect.centery - nearest_lootbox.rect.centery) ** 2 if nearest_lootbox is not None else 1000000000
+                    player.rect.centery - nearest_lootbox.rect.centery) ** 2 if nearest_lootbox is not None else 1000000000
             min_dist = min(door_dist_sq, lootbox_dist_sq)
             if min_dist <= self.range:
                 if min_dist == door_dist_sq:
@@ -432,11 +456,22 @@ class Enemy(Entity):
         self.speed = speed
         self.stop = 0
         self.direction = 0
+        self.reset_target = 0
 
     def detection_player(self):
         if abs(self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
-                                                       player.rect.centery)) <= 30:
-            self.detection = True
+                                                       player.rect.centery)) <= 30 or abs(
+            self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
+                                                    player.rect.centery)) >= 330:
+            if (self.rect.centerx - player.rect.centerx) ** 2 + (self.rect.centery - player.rect.centery) ** 2 <= 90000:
+                if self.beam(self.rect.centerx, self.rect.centery, player.rect.centerx,
+                             player.rect.centery):
+                    self.reset_target = 0
+                    self.detection = True
+        if self.detection:
+            self.reset_target += 1
+        if self.reset_target >= 300:
+            self.detection = False
 
     def update(self):
         self.detection_player()
@@ -491,6 +526,7 @@ class Wall(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
+
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
@@ -565,6 +601,7 @@ if __name__ == '__main__':
     lootboxes = pygame.sprite.Group()  # ящики
     enemies = pygame.sprite.Group()
     doors = pygame.sprite.Group()
+    wall_boundaries = pygame.sprite.Group()
 
     sniper_rifle_image = pygame.image.load('sniper_rifle2.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
@@ -614,12 +651,13 @@ if __name__ == '__main__':
         for i in characters:
             i.rect = i.image.get_rect(size=(65, 65), center=i.rect.center)
         bullets.update()
+        # print(clock.get_fps())
         bullets.draw(screen)
-
         player.draw_health_bar('green', player.health)
         for lootbox in lootboxes:
             lootbox.draw_open_progress()
-
+        enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery, player.rect.centerx,
+                    player.rect.centery)
         player.draw_interface()
         clock.tick(FPS)
         pygame.display.flip()
