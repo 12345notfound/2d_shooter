@@ -12,8 +12,11 @@ def pic_to_map(filename):
     result = [[None for _ in range(y)] for _ in range(x)]
     for i in range(x):
         for j in range(y):
-            if pixels[i, j] == (0, 0, 0):
+            if pixels[i, j] == (237, 28, 36, 255):  # 237,28,36 / 0,0,0
                 result[i][j] = Wall(i * 100, j * 100)
+            elif pixels[i, j] == (34, 177, 76, 255):
+                result[i][j] = Door(i * 100, j * 100, 0)
+            print(pixels[i, j])
     return result
 
 
@@ -404,22 +407,6 @@ class Player(Entity):
             self.medkits -= 1
             self.heal()
 
-        # проверка на дверь
-        # if keystate[pygame.K_x]:
-        #     min_dist = 1000000000000  # очень большая константа
-        #     nearest_door = None  # ближайшая дверь
-        #     for door in doors:
-        #         if (player.rect.centerx - door.rect.centerx) ** 2 + (
-        #                 player.rect.centery - door.rect.centery) ** 2 < min_dist:
-        #             min_dist = (
-        #                                    player.rect.centerx - door.rect.centerx) ** 2 + (
-        #                                player.rect.centery - door.rect.centery) ** 2
-        #             nearest_door = door
-        #     if nearest_door is not None and (
-        #             player.rect.centerx - nearest_door.rect.centerx) ** 2 \
-        #             + (
-        #             player.rect.centerx - nearest_door.rect.centerx) ** 2 <= 4000:
-        #         nearest_door.use()
         if keystate[pygame.K_f]:
             nearest_door = self.get_nearest_door()
             nearest_lootbox = self.get_nearest_lootbox()
@@ -429,7 +416,10 @@ class Player(Entity):
                     player.rect.centery - nearest_lootbox.rect.centery) ** 2 if nearest_lootbox is not None else 1000000000
             min_dist = min(door_dist_sq, lootbox_dist_sq)
             if min_dist <= self.range:
-                if min_dist == door_dist_sq:
+                if min_dist == door_dist_sq and \
+                        (not pygame.sprite.collide_rect(self, nearest_door) or
+                         abs(player.rect.x - nearest_door.rect.x) in {player.rect.w, nearest_door.rect.w} or
+                        abs(player.rect.y - nearest_door.rect.y) in {player.rect.y, nearest_door.rect.y}):
                     nearest_door.use()
                 elif min_dist == lootbox_dist_sq:
                     nearest_lootbox.add_timer()
@@ -622,8 +612,10 @@ if __name__ == '__main__':
     enemy1 = Enemy(100, 100, [['go', 100, 100], ['go', 100, 200], ['go', 500, 200], ['go', 100, 200],
                               ['stop', 100], ['go', 100, 100]])
 
-    player = Player(550, 550)
-    pic_to_map('lvl1.png')
+    player = Player(9200, 8600)  # 550, 550
+    pic_to_map('map100.png')
+    for wall in walls:
+        print(wall.rect.center)
 
     while running:
         # внутри игрового цикла ещё один цикл
@@ -658,6 +650,7 @@ if __name__ == '__main__':
             lootbox.draw_open_progress()
         enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery, player.rect.centerx,
                     player.rect.centery)
+        pygame.draw.rect(screen, 'red', player.rect, width=1)
         player.draw_interface()
         clock.tick(FPS)
         pygame.display.flip()
