@@ -369,6 +369,9 @@ class Player(Entity):
         self.current_weapon = 1
         self.medkits = 0
         self.range = 15000
+        self.wall_hitbox = self.rect
+        self.rect.h = self.rect.w = 64
+        self.rect.move(-7, -7)
 
     def get_current_weapon(self):
         """Возвращает текущее оружие игрока"""
@@ -469,11 +472,11 @@ class Player(Entity):
                     player.rect.centery - nearest_lootbox.rect.centery) ** 2 if nearest_lootbox is not None else 1000000000
             min_dist = min(door_dist_sq, lootbox_dist_sq)
             if min_dist <= self.range:
-                if min_dist == door_dist_sq and \
-                        (not pygame.sprite.collide_rect(self, nearest_door) or
-                         abs(player.rect.x - nearest_door.rect.x) in {player.rect.w, nearest_door.rect.w} or
-                         abs(player.rect.y - nearest_door.rect.y) in {player.rect.y, nearest_door.rect.y}):
-                    nearest_door.use()
+                if min_dist == door_dist_sq:
+                    if not nearest_door.is_open:
+                        nearest_door.use()
+                    else:
+                        nearest_door.use()
                 elif min_dist == lootbox_dist_sq:
                     nearest_lootbox.add_timer()
 
@@ -579,7 +582,7 @@ class Wall(pygame.sprite.Sprite):
 class Door(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         super().__init__(all_sprites, doors, doors_wall, walls)
-        self.image = pygame.Surface((10, 100))
+        self.image = pygame.Surface((20, 100))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         self.image.fill((128, 0, 0))
@@ -631,7 +634,7 @@ class Camera:
 
 if __name__ == '__main__':
 
-    FPS = 60
+    FPS = 90
     pygame.init()
     size = width, height = 1400, 700
     screen = pygame.display.set_mode(size)
@@ -666,12 +669,12 @@ if __name__ == '__main__':
     MedkitLootbox(500, 700)
     Door(400, 200, 0)
     camera = Camera()
-    enemy1 = Enemy([['go', 9200, 8600], ['go', 9200, 8500], ['go', 500, 200], ['go', 100, 200],
+    enemy1 = Enemy([['go', 4500, 4200], ['go', 4400, 4150], ['go', 250, 100], ['go', 500, 100],
                     ['stop', 100], ['go', 100, 100]])
 
-    player = Player(9200, 8600)  # 550, 550
+    player = Player(4500, 4200)  # 550, 550
 
-    wall_layout = pic_to_map('map100.png')  # массив из пикселей картинки, где находится стена
+    wall_layout = pic_to_map('map50.png')  # массив из пикселей картинки, где находится стена
     # for wall in walls:
     #     print(wall.rect.center)
 
@@ -686,7 +689,11 @@ if __name__ == '__main__':
         # отрисовка и изменение свойств объектов
         # characters.update()
         player.get_current_weapon().update()
-        characters.update()
+        player.rect = player.image.get_rect(size=(64, 64), center=player.rect.center)
+        player.update()
+        for i in characters:
+            if i != player:
+                i.update()
         camera.update(player)
         for sprite in all_sprites:
             camera.apply(sprite)
@@ -711,6 +718,7 @@ if __name__ == '__main__':
                     player.rect.centery)
         pygame.draw.rect(screen, 'red', player.rect, width=1)
         pygame.draw.rect(screen, 'red', player.rect, width=1)
+        screen.blit(pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True, 'red'), (100, 100))
         player.draw_interface()
         clock.tick(FPS)
         pygame.display.flip()
