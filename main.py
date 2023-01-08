@@ -9,15 +9,32 @@ def pic_to_map(filename):
     im = Image.open(filename)
     pixels = im.load()
     x, y = im.size
-    result = [[None for _ in range(y)] for _ in range(x)]
+    result = [[False for _ in range(y)] for _ in range(x)]
     for i in range(x):
         for j in range(y):
             if pixels[i, j] == (237, 28, 36, 255):  # 237,28,36 / 0,0,0
-                result[i][j] = Wall(i * 100, j * 100)
+                Wall(i * 100, j * 100)
+                result[i][j] = True
             elif pixels[i, j] == (34, 177, 76, 255):
-                result[i][j] = Door(i * 100, j * 100, 0)
-            print(pixels[i, j])
+                Door(i * 100, j * 100, 0)
     return result
+
+def translation_coordinates(x, y):
+    '''переводит координату относительно расположения пикселя на карте'''
+    return (x + player.real_posx - player.rect.centerx + 50, y+player.real_posy - player.rect.centery + 50)
+
+
+def defining_intersection(coord, size_x, size_y):
+    '''проверяет на принадлежность к стене'''
+    x_real, y_real = coord[0], coord[1]
+    print(x_real, y_real)
+    if size_x == 1 and size_y == 1:
+        return wall_layout[x_real // 100][y_real // 100]
+    else:
+        return wall_layout[x_real // 100][y_real // 100] or wall_layout[(x_real + size_x - 1) // 100][
+            (y_real + size_y - 1) // 100] or \
+               wall_layout[(x_real + size_x - 1) // 100][y_real // 100] or wall_layout[x_real // 100][
+                   (y_real + size_y - 1) // 100]
 
 
 class Weapon:
@@ -56,8 +73,8 @@ class Weapon:
                     # print(self.spread_now)
                     # стрельба
                     turn = self.who.direction + random.randint(-self.spread_now, self.spread_now)
-                    Bullet(self.who.rect.centerx - sin(radians(turn)) * 50,
-                           self.who.rect.centery - cos(radians(turn)) * 50,
+                    Bullet(self.who.rect.centerx - sin(radians(turn)) * 55,
+                           self.who.rect.centery - cos(radians(turn)) * 55,
                            -sin(radians(turn)) * self.speed,
                            -cos(radians(turn)) * self.speed, damage=self.damage)
                     self.frequency_now = self.frequency
@@ -202,7 +219,9 @@ class Bullet(pygame.sprite.Sprite):
             self.float_y += self.speedy / 50
             self.rect.centerx = int(self.float_x)
             self.rect.centery = int(self.float_y)
-            if pygame.sprite.spritecollide(self, walls, False) or pygame.sprite.spritecollide(self, characters, False):
+            # pygame.sprite.spritecollide(self, walls, False)
+            if defining_intersection(translation_coordinates(self.rect.centerx - 5, self.rect.centery - 5), 10,
+                                     10) or pygame.sprite.spritecollide(self, characters, False) or pygame.sprite.spritecollide(self, doors_wall, False):
                 self.kill()
 
 
@@ -214,6 +233,8 @@ class Entity(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
+        self.real_posx = x
+        self.real_posy = y
         # self.mask = pygame.mask.from_surface(self.image)
 
         self.health = 10
@@ -228,45 +249,79 @@ class Entity(pygame.sprite.Sprite):
 
     def move_entity(self, x, y):
         """Переместить сущность на координаты х, y"""
-        start_x, start_y = self.rect.centerx, self.rect.centery
-        self.rect = self.image.get_rect(size=(65, 65), center=self.rect.center)
-        self.rect.centerx = start_x + x
-        self.rect.centery = start_y + y
+        # start_x, start_y = self.rect.centerx, self.rect.centery
+        start_x, start_y = self.real_posx,self.real_posy
+        self.rect = self.image.get_rect(size=(64, 64), center=self.rect.center)
+        # self.rect.centerx = start_x + x
+        # self.rect.centery = start_y + y
+        self.real_posx = start_x + x
+        self.real_posy = start_y + y
         x_move, y_move, xy_move = True, True, True
         xshift = 0
         yshift = 0
-        for wall in walls:
-            if pygame.sprite.collide_rect(self, wall):
-                xy_move = False
-                break
-        self.rect.centerx = start_x + x
-        self.rect.centery = start_y
-        for wall in walls:
-            if pygame.sprite.collide_rect(self, wall):
-                x_move = False
-                break
-        self.rect.centerx = start_x
-        self.rect.centery = start_y + y
-        for wall in walls:
-            if pygame.sprite.collide_rect(self, wall):
-                y_move = False
-                break
+        # for wall in walls:
+        #     if pygame.sprite.collide_rect(self, wall):
+        if defining_intersection((self.real_posx - 32 + 50, self.real_posy - 32 + 50), 64, 64):
+            xy_move = False
+        else:
+            self.rect.centerx += x
+            self.rect.centery += y
+            for door in doors_wall:
+                if pygame.sprite.collide_rect(self, door):
+                    xy_move = False
+            self.rect.centerx -= x
+            self.rect.centery -= y
+            # breaks
+        # self.rect.centerx = start_x + x
+        # self.rect.centery = start_y
+        self.real_posx = start_x + x
+        self.real_posy = start_y
+        # for wall in walls:
+        #     if pygame.sprite.collide_rect(self, wall):
+        if defining_intersection((self.real_posx - 32 + 50, self.real_posy - 32 + 50), 64, 64):
+            x_move = False
+        else:
+            self.rect.centerx += x
+            for door in doors_wall:
+                if pygame.sprite.collide_rect(self, door):
+                    x_move = False
+            self.rect.centerx -= x
+            # break
+        # self.rect.centerx = start_x
+        # self.rect.centery = start_y + y
+        self.real_posx = start_x
+        self.real_posy = start_y + y
+        # for wall in walls:
+        #     if pygame.sprite.collide_rect(self, wall):
+        if defining_intersection((self.real_posx - 32 + 50, self.real_posy - 32 + 50), 64, 64):
+            y_move = False
+        else:
+            self.rect.centery += y
+            for door in doors_wall:
+                if pygame.sprite.collide_rect(self,door):
+                    y_move = False
+            self.rect.centery -= y
+            # break
         if xy_move:
             self.movement = True
-            self.rect.centerx = start_x + x
-            self.rect.centery = start_y + y
+            self.rect.centerx += x
+            self.rect.centery += y
+            self.real_posx = start_x + x
+            self.real_posy = start_y + y
         elif x_move:
             self.movement = True
-            self.rect.centerx = start_x + x
-            self.rect.centery = start_y
+            self.rect.centerx +=x
+            self.real_posx = start_x + x
+            self.real_posy = start_y
         elif y_move:
             self.movement = True
-            self.rect.centerx = start_x
-            self.rect.centery = start_y + y
+            self.rect.centery +=y
+            self.real_posx = start_x
+            self.real_posy = start_y + y
         else:
             self.movement = True
-            self.rect.centerx = start_x
-            self.rect.centery = start_y
+            self.real_posx = start_x
+            self.real_posy = start_y
         if x == 0 and y == 0:
             self.movement = False
 
@@ -289,18 +344,16 @@ class Entity(pygame.sprite.Sprite):
         return turn
 
     def beam(self, x_start, y_start, x_end, y_end):
-        accuracy = 100
+        '''рисует луч'''
+        accuracy = 100  # точность
         x_speed = (x_end - x_start) / accuracy
         y_speed = (y_end - y_start) / accuracy
         dist = accuracy
         for i in range(1, accuracy + 1):
             x, y = int(x_start + x_speed * i), int(y_start + y_speed * i)
-            for j in walls:
-                if j.rect.colliderect(pygame.Rect((x, y, 1, 1))):
-                    print(1)
-                    dist = i
-                    break
-            if dist != accuracy:
+            if defining_intersection(translation_coordinates(x, y), 1,
+                                     1) or pygame.Rect((x, y, 1, 1)).collidelist(list(doors)) != -1:
+                dist = i
                 break
         pygame.draw.line(screen, pygame.Color('red'), (x_start, y_start),
                          (int(x_start + x_speed * dist), int(y_start + y_speed * dist)))
@@ -419,7 +472,7 @@ class Player(Entity):
                 if min_dist == door_dist_sq and \
                         (not pygame.sprite.collide_rect(self, nearest_door) or
                          abs(player.rect.x - nearest_door.rect.x) in {player.rect.w, nearest_door.rect.w} or
-                        abs(player.rect.y - nearest_door.rect.y) in {player.rect.y, nearest_door.rect.y}):
+                         abs(player.rect.y - nearest_door.rect.y) in {player.rect.y, nearest_door.rect.y}):
                     nearest_door.use()
                 elif min_dist == lootbox_dist_sq:
                     nearest_lootbox.add_timer()
@@ -435,14 +488,14 @@ class Player(Entity):
 
 
 class Enemy(Entity):
-    def __init__(self, x, y, trajectory, speed=2):
-        super().__init__(x, y)
+    def __init__(self, trajectory, speed=2):
+        super().__init__(trajectory[0][1], trajectory[0][2])
         enemies.add(self)
-        self.trajectory = trajectory  # путь
-        self.trajectory_pos = 0
+        self.trajectory = trajectory  # массив действий
+        self.trajectory_pos = 0  # этап выполнения
         self.detection = False  # видит ли игрока
-        self.real_posx = x
-        self.real_posy = y
+        self.real_posx = trajectory[0][1]
+        self.real_posy = trajectory[0][2]
         self.speed = speed
         self.stop = 0
         self.direction = 0
@@ -479,20 +532,20 @@ class Enemy(Entity):
                                                             self.trajectory[self.trajectory_pos + 1][1],
                                                             self.trajectory[self.trajectory_pos + 1][2])
                     self.image = pygame.transform.rotate(im1, self.direction)
-                    self.move_entity(-sin(radians(self.direction)) * self.speed,
-                                     -cos(radians(self.direction)) * self.speed)
-                    self.real_posx -= sin(radians(self.direction)) * self.speed
-                    self.real_posy -= cos(radians(self.direction)) * self.speed
+                    self.move_entity(int(-sin(radians(self.direction)) * self.speed),
+                                     int(-cos(radians(self.direction)) * self.speed))
+                    # self.real_posx -= sin(radians(self.direction)) * self.speed
+                    # self.real_posy -= cos(radians(self.direction)) * self.speed
                 else:
-                    self.move_entity(-sin(radians(self.direction)) * (
+                    self.move_entity(int(-sin(radians(self.direction)) * (
                             (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
-                            int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2) ** 0.5,
-                                     -cos(radians(self.direction)) * ((int(self.real_posx) -
+                            int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2) ** 0.5),
+                                     int(-cos(radians(self.direction)) * ((int(self.real_posx) -
                                                                        self.trajectory[self.trajectory_pos + 1][
                                                                            1]) ** 2 + (
                                                                               int(self.real_posy) -
                                                                               self.trajectory[self.trajectory_pos + 1][
-                                                                                  2]) ** 2) ** 0.5)
+                                                                                  2]) ** 2) ** 0.5))
                     self.real_posx, self.real_posy = self.trajectory[self.trajectory_pos + 1][1:3]
                     self.trajectory_pos += 1
                     self.trajectory_pos %= len(self.trajectory) - 1
@@ -525,7 +578,7 @@ class Wall(pygame.sprite.Sprite):
 
 class Door(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
-        super().__init__(all_sprites, doors, walls)
+        super().__init__(all_sprites, doors, doors_wall, walls)
         self.image = pygame.Surface((10, 100))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
@@ -540,9 +593,11 @@ class Door(pygame.sprite.Sprite):
             if self.is_open:
                 self.is_open = False
                 walls.add(self)
+                doors_wall.add(self)
             else:
                 self.is_open = True
                 walls.remove(self)
+                doors_wall.remove(self)
             self.change_image()
             self.delay = self.max_delay
 
@@ -592,6 +647,8 @@ if __name__ == '__main__':
     enemies = pygame.sprite.Group()
     doors = pygame.sprite.Group()
     wall_boundaries = pygame.sprite.Group()
+    doors_wall = pygame.sprite.Group()
+
 
     sniper_rifle_image = pygame.image.load('sniper_rifle2.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
@@ -609,13 +666,14 @@ if __name__ == '__main__':
     MedkitLootbox(500, 700)
     Door(400, 200, 0)
     camera = Camera()
-    enemy1 = Enemy(100, 100, [['go', 100, 100], ['go', 100, 200], ['go', 500, 200], ['go', 100, 200],
-                              ['stop', 100], ['go', 100, 100]])
+    enemy1 = Enemy([['go', 9200, 8600], ['go', 9200, 8500], ['go', 500, 200], ['go', 100, 200],
+                    ['stop', 100], ['go', 100, 100]])
 
     player = Player(9200, 8600)  # 550, 550
-    pic_to_map('map100.png')
-    for wall in walls:
-        print(wall.rect.center)
+
+    wall_layout = pic_to_map('map100.png')  # массив из пикселей картинки, где находится стена
+    # for wall in walls:
+    #     print(wall.rect.center)
 
     while running:
         # внутри игрового цикла ещё один цикл
@@ -641,15 +699,17 @@ if __name__ == '__main__':
         doors.draw(screen)
         doors.update()
         for i in characters:
-            i.rect = i.image.get_rect(size=(65, 65), center=i.rect.center)
+            i.rect = i.image.get_rect(size=(64, 64), center=i.rect.center)
+        print(player.real_posx, player.real_posy)
         bullets.update()
-        # print(clock.get_fps())
+        print(clock.get_fps())
         bullets.draw(screen)
         player.draw_health_bar('green', player.health)
         for lootbox in lootboxes:
             lootbox.draw_open_progress()
         enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery, player.rect.centerx,
                     player.rect.centery)
+        pygame.draw.rect(screen, 'red', player.rect, width=1)
         pygame.draw.rect(screen, 'red', player.rect, width=1)
         player.draw_interface()
         clock.tick(FPS)
