@@ -17,26 +17,54 @@ def pic_to_map(filename):
                 result[i][j] = True
             elif pixels[i, j] == (34, 177, 76, 255):
                 Door(i * 100, j * 100, 0)
+                result[i][j] = [True, 0]
             elif pixels[i, j] == (136, 177, 77, 255):
                 Door(i * 100, j * 100, 1)
+                result[i][j] = [True, 1]
     return result
+
 
 def translation_coordinates(x, y):
     '''переводит координату относительно расположения пикселя на карте'''
-    return (x + player.real_posx - player.rect.centerx + 50, y+player.real_posy - player.rect.centery + 50)
+    return (x + player.real_posx - player.rect.centerx + 37, y + player.real_posy - player.rect.centery + 37)
+
+
+def data_translation(pixelx, pixely):
+    if type(wall_layout[pixelx // 100][pixely // 100]) == list:
+        if wall_layout[pixelx // 100][pixely // 100][1] == 1:
+            if abs(pixely / 100 - int(pixely / 100) - 0.5) <= 0.1:
+                return wall_layout[pixelx // 100][pixely // 100][0]
+            else:
+                return False
+        else:
+            if abs(pixelx / 100 - int(pixelx / 100) - 0.5) <= 0.1:
+                return wall_layout[pixelx // 100][pixely // 100][0]
+            else:
+                return False
+    return wall_layout[pixelx // 100][pixely // 100]
 
 
 def defining_intersection(coord, size_x, size_y):
     '''проверяет на принадлежность к стене'''
+    # try:
     x_real, y_real = coord[0], coord[1]
     # print(x_real, y_real)
     if size_x == 1 and size_y == 1:
-        return wall_layout[x_real // 100][y_real // 100]
+        # if type(wall_layout[x_real // 100][y_real // 100])==list:
+        #     return wall_layout[x_real // 100][y_real // 100][0]
+        # return wall_layout[x_real // 100][y_real // 100]
+        return data_translation(x_real, y_real)
     else:
-        return wall_layout[x_real // 100][y_real // 100] or wall_layout[(x_real + size_x - 1) // 100][
-            (y_real + size_y - 1) // 100] or \
-               wall_layout[(x_real + size_x - 1) // 100][y_real // 100] or wall_layout[x_real // 100][
-                   (y_real + size_y - 1) // 100]
+        # return wall_layout[x_real // 100][y_real // 100] or wall_layout[(x_real + size_x - 1) // 100][
+        #     (y_real + size_y - 1) // 100] or \
+        #        wall_layout[(x_real + size_x - 1) // 100][y_real // 100] or wall_layout[x_real // 100][
+        #            (y_real + size_y - 1) // 100]
+        return data_translation(x_real, y_real) or data_translation((x_real + size_x - 1),
+                                                                    (y_real + size_y - 1)) or \
+               data_translation((x_real + size_x - 1), y_real) or data_translation(x_real,
+                                                                                   (y_real + size_y - 1))
+    # except IndexError:
+    #     return True
 
 
 class Weapon:
@@ -223,7 +251,8 @@ class Bullet(pygame.sprite.Sprite):
             self.rect.centery = int(self.float_y)
             # pygame.sprite.spritecollide(self, walls, False)
             if defining_intersection(translation_coordinates(self.rect.centerx - 5, self.rect.centery - 5), 10,
-                                     10) or pygame.sprite.spritecollide(self, characters, False) or pygame.sprite.spritecollide(self, doors_wall, False):
+                                     10) or pygame.sprite.spritecollide(self, characters,
+                                                                        False):
                 self.kill()
 
 
@@ -252,7 +281,7 @@ class Entity(pygame.sprite.Sprite):
     def move_entity(self, x, y):
         """Переместить сущность на координаты х, y"""
         # start_x, start_y = self.rect.centerx, self.rect.centery
-        start_x, start_y = self.real_posx,self.real_posy
+        start_x, start_y = self.real_posx, self.real_posy
         self.rect = self.image.get_rect(size=(64, 64), center=self.rect.center)
         # self.rect.centerx = start_x + x
         # self.rect.centery = start_y + y
@@ -263,16 +292,8 @@ class Entity(pygame.sprite.Sprite):
         yshift = 0
         # for wall in walls:
         #     if pygame.sprite.collide_rect(self, wall):
-        if defining_intersection((self.real_posx - 32 + 50, self.real_posy - 32 + 50), 64, 64):
+        if defining_intersection((self.real_posx - 32 + 37, self.real_posy - 32 + 37), 64, 64):
             xy_move = False
-        else:
-            self.rect.centerx += x
-            self.rect.centery += y
-            for door in doors_wall:
-                if pygame.sprite.collide_rect(self, door):
-                    xy_move = False
-            self.rect.centerx -= x
-            self.rect.centery -= y
             # breaks
         # self.rect.centerx = start_x + x
         # self.rect.centery = start_y
@@ -280,14 +301,9 @@ class Entity(pygame.sprite.Sprite):
         self.real_posy = start_y
         # for wall in walls:
         #     if pygame.sprite.collide_rect(self, wall):
-        if defining_intersection((self.real_posx - 32 + 50, self.real_posy - 32 + 50), 64, 64):
+        if defining_intersection((self.real_posx - 32 + 37, self.real_posy - 32 + 37), 64, 64):
             x_move = False
-        else:
-            self.rect.centerx += x
-            for door in doors_wall:
-                if pygame.sprite.collide_rect(self, door):
-                    x_move = False
-            self.rect.centerx -= x
+
             # break
         # self.rect.centerx = start_x
         # self.rect.centery = start_y + y
@@ -295,14 +311,8 @@ class Entity(pygame.sprite.Sprite):
         self.real_posy = start_y + y
         # for wall in walls:
         #     if pygame.sprite.collide_rect(self, wall):
-        if defining_intersection((self.real_posx - 32 + 50, self.real_posy - 32 + 50), 64, 64):
+        if defining_intersection((self.real_posx - 32 + 37, self.real_posy - 32 + 37), 64, 64):
             y_move = False
-        else:
-            self.rect.centery += y
-            for door in doors_wall:
-                if pygame.sprite.collide_rect(self,door):
-                    y_move = False
-            self.rect.centery -= y
             # break
         if xy_move:
             self.movement = True
@@ -312,12 +322,12 @@ class Entity(pygame.sprite.Sprite):
             self.real_posy = start_y + y
         elif x_move:
             self.movement = True
-            self.rect.centerx +=x
+            self.rect.centerx += x
             self.real_posx = start_x + x
             self.real_posy = start_y
         elif y_move:
             self.movement = True
-            self.rect.centery +=y
+            self.rect.centery += y
             self.real_posx = start_x
             self.real_posy = start_y + y
         else:
@@ -347,23 +357,27 @@ class Entity(pygame.sprite.Sprite):
             return 0
         return turn
 
-    def beam(self, x_start, y_start, x_end, y_end):
+    def beam(self, x_start, y_start, x_end=False, y_end=False, turn=0, long=500):
         '''рисует луч'''
-        accuracy = 100  # точность
-        x_speed = (x_end - x_start) / accuracy
-        y_speed = (y_end - y_start) / accuracy
+        accuracy = 150  # точность
+        if x_end and y_end:
+            x_speed = (x_end - x_start) / accuracy
+            y_speed = (y_end - y_start) / accuracy
+        else:
+            x_speed = -sin(radians(turn)) * long / accuracy
+            y_speed = -cos(radians(turn)) * long / accuracy
         dist = accuracy
         for i in range(1, accuracy + 1):
             x, y = int(x_start + x_speed * i), int(y_start + y_speed * i)
             if defining_intersection(translation_coordinates(x, y), 1,
-                                     1) or pygame.Rect((x, y, 1, 1)).collidelist(list(doors)) != -1:
+                                     1):
                 dist = i
                 break
         pygame.draw.line(screen, pygame.Color('red'), (x_start, y_start),
-                         (int(x_start + x_speed * dist), int(y_start + y_speed * dist)))
-        if dist != accuracy:
-            return False
-        return True
+                         (x, y))
+        if dist == accuracy:
+            return (True, (x, y))
+        return (False, (x, y))
 
 
 class Player(Entity):
@@ -418,6 +432,11 @@ class Player(Entity):
                 nearest_lootbox = lootbox
         return nearest_lootbox
 
+    def tracing(self):
+        self.viewing_angle = 45
+        for i in range(self.viewing_angle // 3):
+            self.beam(700, 350, turn=self.direction - self.viewing_angle / 2 + 3 * i, long=700)
+
     def update(self):
         xshift = 0
         yshift = 0
@@ -435,6 +454,8 @@ class Player(Entity):
             # поворот персонажа к курсору
         self.direction = self.determining_angle(self.rect.centerx, self.rect.centery, pygame.mouse.get_pos()[0],
                                                 pygame.mouse.get_pos()[1])
+        # self.tracing()
+
         self.movement = False
         self.move_entity(xshift, yshift)
         self.wall_hitbox.x += xshift
@@ -484,7 +505,8 @@ class Player(Entity):
                     if not nearest_door.is_open:  # дверь закрыта
                         nearest_door.use()
                     else:
-                        if not pygame.Rect.colliderect(self.wall_hitbox, nearest_door.rect):  # дверь открыта, но не пересекается с игроком
+                        if not pygame.Rect.colliderect(self.wall_hitbox,
+                                                       nearest_door.rect):  # дверь открыта, но не пересекается с игроком
                             nearest_door.use()
                 elif min_dist == lootbox_dist_sq:
                     nearest_lootbox.add_timer()
@@ -519,8 +541,8 @@ class Enemy(Entity):
             self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
                                                     player.rect.centery)) >= 330:
             if (self.rect.centerx - player.rect.centerx) ** 2 + (self.rect.centery - player.rect.centery) ** 2 <= 90000:
-                if self.beam(self.rect.centerx, self.rect.centery, player.rect.centerx,
-                             player.rect.centery):
+                if self.beam(self.rect.centerx, self.rect.centery, x_end=player.rect.centerx,
+                             y_end=player.rect.centery)[0]:
                     self.reset_target = 0
                     self.detection = True
         if self.detection:
@@ -553,11 +575,12 @@ class Enemy(Entity):
                             (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
                             int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2) ** 0.5),
                                      int(-cos(radians(self.direction)) * ((int(self.real_posx) -
-                                                                       self.trajectory[self.trajectory_pos + 1][
-                                                                           1]) ** 2 + (
-                                                                              int(self.real_posy) -
-                                                                              self.trajectory[self.trajectory_pos + 1][
-                                                                                  2]) ** 2) ** 0.5))
+                                                                           self.trajectory[self.trajectory_pos + 1][
+                                                                               1]) ** 2 + (
+                                                                                  int(self.real_posy) -
+                                                                                  self.trajectory[
+                                                                                      self.trajectory_pos + 1][
+                                                                                      2]) ** 2) ** 0.5))
                     self.real_posx, self.real_posy = self.trajectory[self.trajectory_pos + 1][1:3]
                     self.trajectory_pos += 1
                     self.trajectory_pos %= len(self.trajectory) - 1
@@ -597,6 +620,8 @@ class Door(pygame.sprite.Sprite):
             self.image = pygame.Surface((100, 20))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
+        self.constx = x
+        self.consty = y
         self.image.fill((128, 0, 0))
         self.is_open = False
         self.max_delay = FPS
@@ -605,10 +630,12 @@ class Door(pygame.sprite.Sprite):
     def use(self):
         if self.delay == 0:
             if self.is_open:
+                wall_layout[self.constx // 100][self.consty // 100][0] = True
                 self.is_open = False
                 walls.add(self)
                 doors_wall.add(self)
             else:
+                wall_layout[self.constx // 100][self.consty // 100][0] = False
                 self.is_open = True
                 walls.remove(self)
                 doors_wall.remove(self)
@@ -665,7 +692,6 @@ if __name__ == '__main__':
     doors = pygame.sprite.Group()
     wall_boundaries = pygame.sprite.Group()
     doors_wall = pygame.sprite.Group()
-
 
     sniper_rifle_image = pygame.image.load('sniper_rifle2.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
@@ -730,8 +756,9 @@ if __name__ == '__main__':
             lootbox.draw_open_progress()
         enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery, player.rect.centerx,
                     player.rect.centery)
-        # pygame.draw.rect(screen, 'red', player.rect, width=1)
-        # pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
+        player.tracing()
+        pygame.draw.rect(screen, 'red', player.rect, width=1)
+        pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
         # print(player.wall_hitbox.center, '/', player.rect.center)
         # print(player.rect.size, player.wall_hitbox.size)
         screen.blit(pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True, 'red'), (100, 100))
