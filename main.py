@@ -17,6 +17,8 @@ def pic_to_map(filename):
                 result[i][j] = True
             elif pixels[i, j] == (34, 177, 76, 255):
                 Door(i * 100, j * 100, 0)
+            elif pixels[i, j] == (136, 177, 77, 255):
+                Door(i * 100, j * 100, 1)
     return result
 
 def translation_coordinates(x, y):
@@ -27,7 +29,7 @@ def translation_coordinates(x, y):
 def defining_intersection(coord, size_x, size_y):
     '''проверяет на принадлежность к стене'''
     x_real, y_real = coord[0], coord[1]
-    print(x_real, y_real)
+    # print(x_real, y_real)
     if size_x == 1 and size_y == 1:
         return wall_layout[x_real // 100][y_real // 100]
     else:
@@ -324,6 +326,8 @@ class Entity(pygame.sprite.Sprite):
             self.real_posy = start_y
         if x == 0 and y == 0:
             self.movement = False
+        if type(self) == Player:
+            self.wall_hitbox.center = self.rect.center
 
     def draw_health_bar(self, health_color, health):
         pygame.draw.rect(screen, width=1, rect=(self.rect.centerx - 26, self.rect.centery - 50, 52, 12), color='black')
@@ -370,8 +374,8 @@ class Player(Entity):
         self.medkits = 0
         self.range = 15000
         self.wall_hitbox = self.rect
-        self.rect.h = self.rect.w = 64
-        self.rect.move(-7, -7)
+        self.wall_hitbox.h = self.wall_hitbox.w = 54
+        # self.wall_hitbox.move(1, 1)
 
     def get_current_weapon(self):
         """Возвращает текущее оружие игрока"""
@@ -389,6 +393,7 @@ class Player(Entity):
         self.get_current_weapon().draw_interface()
 
     def get_nearest_door(self):
+        """Возвращает ближайшую к игроку дверь"""
         min_dist = 1000000000000  # очень большая константа
         nearest_door = None  # ближайшая дверь
         for door in doors:
@@ -401,6 +406,7 @@ class Player(Entity):
         return nearest_door
 
     def get_nearest_lootbox(self):
+        """Возвращает ближайший к игроку ящик"""
         min_dist = 1000000000000  # очень большая константа
         nearest_lootbox = None  # ближайшая коробка
         for lootbox in lootboxes:
@@ -431,6 +437,8 @@ class Player(Entity):
                                                 pygame.mouse.get_pos()[1])
         self.movement = False
         self.move_entity(xshift, yshift)
+        self.wall_hitbox.x += xshift
+        self.wall_hitbox.y += yshift
         self.image = pygame.transform.rotate(im1, self.direction)
         self.rect = self.image.get_rect(center=self.rect.center)
         # проверка, есть ли рядом ящики
@@ -473,10 +481,11 @@ class Player(Entity):
             min_dist = min(door_dist_sq, lootbox_dist_sq)
             if min_dist <= self.range:
                 if min_dist == door_dist_sq:
-                    if not nearest_door.is_open:
+                    if not nearest_door.is_open:  # дверь закрыта
                         nearest_door.use()
                     else:
-                        nearest_door.use()
+                        if not pygame.Rect.colliderect(self.wall_hitbox, nearest_door.rect):  # дверь открыта, но не пересекается с игроком
+                            nearest_door.use()
                 elif min_dist == lootbox_dist_sq:
                     nearest_lootbox.add_timer()
 
@@ -582,11 +591,13 @@ class Wall(pygame.sprite.Sprite):
 class Door(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         super().__init__(all_sprites, doors, doors_wall, walls)
-        self.image = pygame.Surface((20, 100))
+        if direction == 0:
+            self.image = pygame.Surface((20, 100))
+        elif direction == 1:
+            self.image = pygame.Surface((100, 20))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         self.image.fill((128, 0, 0))
-        self.direction = direction
         self.is_open = False
         self.max_delay = FPS
         self.delay = self.max_delay
@@ -625,6 +636,9 @@ class Camera:
     def apply(self, obj):
         obj.rect.x += self.dx
         obj.rect.y += self.dy
+        if type(obj) == Player:
+            obj.wall_hitbox.x += self.dx
+            obj.wall_hitbox.y += self.dy
 
     # позиционировать камеру на объекте target
     def update(self, target):
@@ -707,17 +721,19 @@ if __name__ == '__main__':
         doors.update()
         for i in characters:
             i.rect = i.image.get_rect(size=(64, 64), center=i.rect.center)
-        print(player.real_posx, player.real_posy)
+        # print(player.real_posx, player.real_posy)
         bullets.update()
-        print(clock.get_fps())
+        # print(clock.get_fps())
         bullets.draw(screen)
         player.draw_health_bar('green', player.health)
         for lootbox in lootboxes:
             lootbox.draw_open_progress()
         enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery, player.rect.centerx,
                     player.rect.centery)
-        pygame.draw.rect(screen, 'red', player.rect, width=1)
-        pygame.draw.rect(screen, 'red', player.rect, width=1)
+        # pygame.draw.rect(screen, 'red', player.rect, width=1)
+        # pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
+        # print(player.wall_hitbox.center, '/', player.rect.center)
+        # print(player.rect.size, player.wall_hitbox.size)
         screen.blit(pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True, 'red'), (100, 100))
         player.draw_interface()
         clock.tick(FPS)
