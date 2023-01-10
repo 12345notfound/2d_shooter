@@ -52,7 +52,7 @@ def defining_intersection(coord, size_x, size_y):
     if size_x == 1 and size_y == 1:
         # if type(wall_layout[x_real // 100][y_real // 100])==list:
         #     return wall_layout[x_real // 100][y_real // 100][0]
-        # return wall_layout[x_real // 100][y_real // 100]
+        # return wall_layout[x_real // 100][y_real // 100]ц
         return data_translation(x_real, y_real)
     else:
         # return wall_layout[x_real // 100][y_real // 100] or wall_layout[(x_real + size_x - 1) // 100][
@@ -66,6 +66,13 @@ def defining_intersection(coord, size_x, size_y):
     # except IndexError:
     #     return True
 
+def draw_polygon_alpha(surface, color, points):
+    lx, ly = zip(*points)
+    min_x, min_y, max_x, max_y = min(lx), min(ly), max(lx), max(ly)
+    target_rect = pygame.Rect(min_x, min_y, max_x - min_x, max_y - min_y)
+    shape_surf = pygame.Surface(target_rect.size, pygame.SRCALPHA)
+    pygame.draw.polygon(shape_surf, color, [(x - min_x, y - min_y) for x, y in points])
+    surface.blit(shape_surf, target_rect)
 
 class Weapon:
     def __init__(self, speed, damage, frequency, clip_size, ammo, reload_time, who, queue=-1):
@@ -359,7 +366,7 @@ class Entity(pygame.sprite.Sprite):
 
     def beam(self, x_start, y_start, x_end=False, y_end=False, turn=0, long=500):
         '''рисует луч'''
-        accuracy = 150  # точность
+        accuracy = 200  # точность
         if x_end and y_end:
             x_speed = (x_end - x_start) / accuracy
             y_speed = (y_end - y_start) / accuracy
@@ -373,8 +380,8 @@ class Entity(pygame.sprite.Sprite):
                                      1):
                 dist = i
                 break
-        pygame.draw.line(screen, pygame.Color('red'), (x_start, y_start),
-                         (x, y))
+        # pygame.draw.line(screen, pygame.Color('red'), (x_start, y_start),
+        #                  (x, y))
         if dist == accuracy:
             return (True, (x, y))
         return (False, (x, y))
@@ -433,9 +440,16 @@ class Player(Entity):
         return nearest_lootbox
 
     def tracing(self):
-        self.viewing_angle = 45
-        for i in range(self.viewing_angle // 3):
-            self.beam(700, 350, turn=self.direction - self.viewing_angle / 2 + 3 * i, long=700)
+        self.viewing_angle = 60
+        coord = [(700,350)]
+        #coord_end = self.beam(700, 350, turn=self.direction - self.viewing_angle / 2, long=500)[1]
+        for i in range(self.viewing_angle):
+            coord.append(  self.beam(700, 350, turn=self.direction - self.viewing_angle / 2 + i, long=500)[1])
+            #draw_polygon_alpha(screen, (252,251,177,100),(coord_end,coord_now,(700,350)))
+            #pygame.draw.polygon(screen, (252,251,177,100), (coord_end,coord_now,(700,350)))
+            #coord_end=coord_now
+        coord.append((700,350))
+        draw_polygon_alpha(screen, (252, 251, 177, 51), coord)
 
     def update(self):
         xshift = 0
@@ -675,10 +689,10 @@ class Camera:
 
 if __name__ == '__main__':
 
-    FPS = 90
+    FPS = 60
     pygame.init()
     size = width, height = 1400, 700
-    screen = pygame.display.set_mode(size)
+    screen = pygame.display.set_mode(size, pygame.DOUBLEBUF, 32)
     clock = pygame.time.Clock()
     pygame.mouse.set_visible(True)  # False на релизе
 
@@ -717,8 +731,9 @@ if __name__ == '__main__':
     wall_layout = pic_to_map('map50.png')  # массив из пикселей картинки, где находится стена
     # for wall in walls:
     #     print(wall.rect.center)
-
+    # tr = pygame.Surface((1400, 750))
     while running:
+        #tr.fill((0,0,0,0))
         # внутри игрового цикла ещё один цикл
         # приёма и обработки сообщений
         for event in pygame.event.get():
