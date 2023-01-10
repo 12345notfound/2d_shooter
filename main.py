@@ -364,9 +364,9 @@ class Entity(pygame.sprite.Sprite):
             return 0
         return turn
 
-    def beam(self, x_start, y_start, x_end=False, y_end=False, turn=0, long=500):
+    def beam(self, x_start, y_start, x_end=False, y_end=False, turn=0, long=500, nesting=1):
         '''рисует луч'''
-        accuracy = 200  # точность
+        accuracy = 40  # точность
         if x_end and y_end:
             x_speed = (x_end - x_start) / accuracy
             y_speed = (y_end - y_start) / accuracy
@@ -374,17 +374,20 @@ class Entity(pygame.sprite.Sprite):
             x_speed = -sin(radians(turn)) * long / accuracy
             y_speed = -cos(radians(turn)) * long / accuracy
         dist = accuracy
-        for i in range(1, accuracy + 1):
+        for i in range(0, accuracy + 1):
             x, y = int(x_start + x_speed * i), int(y_start + y_speed * i)
             if defining_intersection(translation_coordinates(x, y), 1,
                                      1):
                 dist = i
-                break
+                if nesting==1:
+                    return (False, self.beam(x-x_speed, y-y_speed,x_end=x,y_end=y,nesting=2)[1])
+                else:
+                    return (False, (x, y))
         # pygame.draw.line(screen, pygame.Color('red'), (x_start, y_start),
         #                  (x, y))
-        if dist == accuracy:
-            return (True, (x, y))
-        return (False, (x, y))
+        # if dist == accuracy:
+        #     return (True, (x, y))
+        return (True, (x, y))
 
 
 class Player(Entity):
@@ -440,7 +443,7 @@ class Player(Entity):
         return nearest_lootbox
 
     def tracing(self):
-        self.viewing_angle = 60
+        self.viewing_angle = 50
         coord = [(700,350)]
         #coord_end = self.beam(700, 350, turn=self.direction - self.viewing_angle / 2, long=500)[1]
         for i in range(self.viewing_angle):
