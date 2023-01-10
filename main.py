@@ -74,6 +74,15 @@ def draw_polygon_alpha(surface, color, points):
     pygame.draw.polygon(shape_surf, color, [(x - min_x, y - min_y) for x, y in points])
     surface.blit(shape_surf, target_rect)
 
+
+def draw_flashlight(points, color):
+    surface1 = pygame.Surface(size)
+    pygame.draw.polygon(surface1, color, points)
+    pygame.draw.polygon(surface1, (255, 255, 255), points, width=2)
+    surface1.set_alpha(192)
+    screen.blit(surface1, (0, 0))
+
+
 class Weapon:
     def __init__(self, speed, damage, frequency, clip_size, ammo, reload_time, who, queue=-1):
         self.speed = speed
@@ -443,13 +452,14 @@ class Player(Entity):
         self.viewing_angle = 60
         coord = [(700,350)]
         #coord_end = self.beam(700, 350, turn=self.direction - self.viewing_angle / 2, long=500)[1]
-        for i in range(self.viewing_angle):
-            coord.append(  self.beam(700, 350, turn=self.direction - self.viewing_angle / 2 + i, long=500)[1])
+        for i in range(self.viewing_angle // 2):
+            coord.append(  self.beam(700, 350, turn=self.direction - self.viewing_angle / 2 + i * 2, long=500)[1])
             #draw_polygon_alpha(screen, (252,251,177,100),(coord_end,coord_now,(700,350)))
             #pygame.draw.polygon(screen, (252,251,177,100), (coord_end,coord_now,(700,350)))
             #coord_end=coord_now
         coord.append((700,350))
-        draw_polygon_alpha(screen, (252, 251, 177, 51), coord)
+        # draw_polygon_alpha(screen, (252, 251, 177, 51), coord)
+        draw_flashlight(coord, (252, 251, 177, 51))
 
     def update(self):
         xshift = 0
@@ -548,6 +558,13 @@ class Enemy(Entity):
         self.stop = 0
         self.direction = 0
         self.reset_target = 0
+
+    # def is_visible(self):
+    #     if (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 > 250000:
+    #         return False
+    #     elif (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 < 10000:
+    #         return True
+    #     elif self.beam(player.rect.x, player.rect.y, self.rect.x, self.rect.y)
 
     def detection_player(self):
         if abs(self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
@@ -707,13 +724,13 @@ if __name__ == '__main__':
     wall_boundaries = pygame.sprite.Group()
     doors_wall = pygame.sprite.Group()
 
-    sniper_rifle_image = pygame.image.load('sniper_rifle2.png').convert()
+    sniper_rifle_image = pygame.image.load('assets/sniper_rifle2.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
-    ak_47_image = pygame.image.load('ak_47_image2.png').convert()
+    ak_47_image = pygame.image.load('assets/ak_47_image2.png').convert()
     ak_47_image.set_colorkey((255, 255, 255))
-    im1 = pygame.image.load('Игрок_2.png').convert()
+    im1 = pygame.image.load('assets/Игрок_2.png').convert()
     im1.set_colorkey((255, 255, 255))
-    knife_image = pygame.image.load('knife_image.png').convert()
+    knife_image = pygame.image.load('assets/knife_image.png').convert()
     knife_image.set_colorkey((255, 255, 255))
 
     running = True
@@ -728,7 +745,7 @@ if __name__ == '__main__':
 
     player = Player(4500, 4200)  # 550, 550
 
-    wall_layout = pic_to_map('map50.png')  # массив из пикселей картинки, где находится стена
+    wall_layout = pic_to_map('assets/map50.png')  # массив из пикселей картинки, где находится стена
     # for wall in walls:
     #     print(wall.rect.center)
     # tr = pygame.Surface((1400, 750))
@@ -755,9 +772,10 @@ if __name__ == '__main__':
         screen.fill('black')
         other_sprites.draw(screen)
         walls.draw(screen)
+
         characters.draw(screen)
         other_sprites.draw(screen)
-        walls.draw(screen)
+        player.tracing()
         doors.draw(screen)
         doors.update()
         for i in characters:
@@ -771,7 +789,7 @@ if __name__ == '__main__':
             lootbox.draw_open_progress()
         enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery, player.rect.centerx,
                     player.rect.centery)
-        player.tracing()
+        # player.tracing()
         pygame.draw.rect(screen, 'red', player.rect, width=1)
         pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
         # print(player.wall_hitbox.center, '/', player.rect.center)
