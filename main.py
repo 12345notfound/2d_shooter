@@ -64,7 +64,7 @@ def defining_intersection(coord, size_x, size_y):
                data_translation((x_real + size_x - 1), y_real) or data_translation(x_real,
                                                                                    (y_real + size_y - 1))
     # except IndexError:
-    #     return True
+    #     return True1
 
 def draw_polygon_alpha(surface, color, points):
     lx, ly = zip(*points)
