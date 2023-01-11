@@ -6,6 +6,8 @@ from PIL import Image
 
 
 def pic_to_map(filename):
+    """Переводит картинку в карту"""
+
     im = Image.open(filename)
     pixels = im.load()
     x, y = im.size
@@ -15,21 +17,25 @@ def pic_to_map(filename):
             if pixels[i, j] == (237, 28, 36, 255):  # 237,28,36 / 0,0,0
                 Wall(i * 100, j * 100)
                 result[i][j] = True
-            elif pixels[i, j] == (34, 177, 77, 255):
+            elif pixels[i, j] == (102, 177, 77, 255):
                 Door(i * 100, j * 100, 0)
                 result[i][j] = [True, 0]
-            elif pixels[i, j] == (136, 177, 77, 255):
+            elif pixels[i, j] == (68, 177, 77, 255):
                 Door(i * 100, j * 100, 1)
                 result[i][j] = [True, 1]
+
+    # возвращает массив с расположнием стен и дверей
     return result
 
 
 def translation_coordinates(x, y):
-    '''переводит координату относительно расположения пикселя на карте'''
+    '''переводит аюсолютную координату относительно расположения пикселя на карте'''
     return (x + player.real_posx - player.rect.centerx + 37, y + player.real_posy - player.rect.centery + 37)
 
 
 def data_translation(pixelx, pixely):
+    """для правильного считывания информации из массива"""
+
     if type(wall_layout[pixelx // 100][pixely // 100]) == list:
         if wall_layout[pixelx // 100][pixely // 100][1] == 1:
             if abs(pixely / 100 - int(pixely / 100) - 0.5) <= 0.1:
@@ -45,46 +51,46 @@ def data_translation(pixelx, pixely):
 
 
 def defining_intersection(coord, size_x, size_y):
-    '''проверяет на принадлежность к стене'''
-    # try:
-    x_real, y_real = coord[0], coord[1]
-    # print(x_real, y_real)
+    '''проверяет на принадлежность к стене или двери'''
+
+    x_real, y_real = int(coord[0]), int(coord[1])
     if size_x == 1 and size_y == 1:
-        # if type(wall_layout[x_real // 100][y_real // 100])==list:
-        #     return wall_layout[x_real // 100][y_real // 100][0]
-        # return wall_layout[x_real // 100][y_real // 100]ц
         return data_translation(x_real, y_real)
     else:
-        # return wall_layout[x_real // 100][y_real // 100] or wall_layout[(x_real + size_x - 1) // 100][
-        #     (y_real + size_y - 1) // 100] or \
-        #        wall_layout[(x_real + size_x - 1) // 100][y_real // 100] or wall_layout[x_real // 100][
-        #            (y_real + size_y - 1) // 100]
         return data_translation(x_real, y_real) or data_translation((x_real + size_x - 1),
                                                                     (y_real + size_y - 1)) or \
                data_translation((x_real + size_x - 1), y_real) or data_translation(x_real,
                                                                                    (y_real + size_y - 1))
-    # except IndexError:
-    #     return True1
 
-def draw_polygon_alpha(surface, color, points):
-    lx, ly = zip(*points)
-    min_x, min_y, max_x, max_y = min(lx), min(ly), max(lx), max(ly)
-    target_rect = pygame.Rect(min_x, min_y, max_x - min_x, max_y - min_y)
-    shape_surf = pygame.Surface(target_rect.size, pygame.SRCALPHA)
-    pygame.draw.polygon(shape_surf, color, [(x - min_x, y - min_y) for x, y in points])
-    surface.blit(shape_surf, target_rect)
+
+# def draw_polygon_alpha(surface, color, points):
+#     lx, ly = zip(*points)
+#     min_x, min_y, max_x, max_y = min(lx), min(ly), max(lx), max(ly)
+#     target_rect = pygame.Rect(min_x, min_y, max_x - min_x, max_y - min_y)
+#     shape_surf = pygame.Surface(target_rect.size, pygame.SRCALPHA)
+#     pygame.draw.polygon(shape_surf, color, [(x - min_x, y - min_y) for x, y in points])
+#     surface.blit(shape_surf, target_rect)
 
 
 def draw_flashlight(points, color):
+    """отрисовывает фонаря"""
+
+    # отрисовка видимости игрока
     surface1 = pygame.Surface(size)
+    surface1.set_alpha(150)
     pygame.draw.polygon(surface1, color, points)
     pygame.draw.polygon(surface1, (255, 255, 255), points, width=2)
-    surface1.set_alpha(192)
     screen.blit(surface1, (0, 0))
+
+    # затемнение экрана
+    # surface2 = pygame.Surface(size)
+    # surface2.set_alpha(100)
+    # screen.blit(surface2, (0, 0))
 
 
 class Weapon:
     """Общий класс оружия"""
+
     def __init__(self, speed, damage, frequency, clip_size, ammo, reload_time, who, queue=-1):
         self.speed = speed
         self.damage = damage
@@ -105,10 +111,10 @@ class Weapon:
         turn = self.who.direction + random.randint(-self.spread_now,
                                                    self.spread_now)
         Bullet(self.who.rect.centerx - sin(
-                radians(turn)) * 55, self.who.rect.centery - cos(
-                radians(turn)) * 55,
-            -sin(radians(turn)) * self.speed,
-            -cos(radians(turn)) * self.speed, damage=damage)
+            radians(turn)) * 55, self.who.rect.centery - cos(
+            radians(turn)) * 55,
+               -sin(radians(turn)) * self.speed,
+               -cos(radians(turn)) * self.speed, damage=damage)
 
     def reload_update(self):
         self.reload_progress += 1
@@ -119,7 +125,7 @@ class Weapon:
 
     def check_reload_start(self):
         if pygame.key.get_pressed()[
-                pygame.K_r] and self.reload_progress == self.reload_time and self.clip != self.clip_size:
+            pygame.K_r] and self.reload_progress == self.reload_time and self.clip != self.clip_size:
             self.reload_progress = 0
 
     def update(self):
@@ -193,8 +199,8 @@ class Shotgun(Weapon):
             ShotgunBullet(self.who.rect.centerx - sin(
                 radians(turn)) * 55, self.who.rect.centery - cos(
                 radians(turn)) * 55,
-            -sin(radians(turn)) * self.speed,
-            -cos(radians(turn)) * self.speed, damage=damage)
+                          -sin(radians(turn)) * self.speed,
+                          -cos(radians(turn)) * self.speed, damage=damage)
 
     def reload_update(self):
         self.reload_progress += 1
@@ -325,6 +331,7 @@ class Bullet(pygame.sprite.Sprite):
 
 class ShotgunBullet(Bullet):
     """Класс пули дробовика"""
+
     def __init__(self, x, y, speed_x, speed_y, damage):
         super().__init__(x, y, speed_x, speed_y, damage)
         self.image = pygame.Surface((3, 3))
@@ -340,16 +347,15 @@ class ShotgunBullet(Bullet):
 
 class Entity(pygame.sprite.Sprite):
     """Общий класс сущности"""
+
     def __init__(self, x, y):
         super().__init__(all_sprites, characters)
         self.image = im1
-        # self.image.fill('red')
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
         self.real_posx = x
         self.real_posy = y
-        # self.mask = pygame.mask.from_surface(self.image)
 
         self.health = 10
         self.max_health = 10
@@ -363,40 +369,20 @@ class Entity(pygame.sprite.Sprite):
 
     def move_entity(self, x, y):
         """Переместить сущность на координаты х, y"""
-        # start_x, start_y = self.rect.centerx, self.rect.centery
         start_x, start_y = self.real_posx, self.real_posy
-        self.rect = self.image.get_rect(size=(64, 64), center=self.rect.center)
-        # self.rect.centerx = start_x + x
-        # self.rect.centery = start_y + y
         self.real_posx = start_x + x
         self.real_posy = start_y + y
         x_move, y_move, xy_move = True, True, True
-        xshift = 0
-        yshift = 0
-        # for wall in walls:
-        #     if pygame.sprite.collide_rect(self, wall):
         if defining_intersection((self.real_posx - 32 + 37, self.real_posy - 32 + 37), 64, 64):
             xy_move = False
-            # breaks
-        # self.rect.centerx = start_x + x
-        # self.rect.centery = start_y
         self.real_posx = start_x + x
         self.real_posy = start_y
-        # for wall in walls:
-        #     if pygame.sprite.collide_rect(self, wall):
         if defining_intersection((self.real_posx - 32 + 37, self.real_posy - 32 + 37), 64, 64):
             x_move = False
-
-            # break
-        # self.rect.centerx = start_x
-        # self.rect.centery = start_y + y
         self.real_posx = start_x
         self.real_posy = start_y + y
-        # for wall in walls:
-        #     if pygame.sprite.collide_rect(self, wall):
         if defining_intersection((self.real_posx - 32 + 37, self.real_posy - 32 + 37), 64, 64):
             y_move = False
-            # break
         if xy_move:
             self.movement = True
             self.rect.centerx += x
@@ -429,6 +415,9 @@ class Entity(pygame.sprite.Sprite):
                          color=health_color)
 
     def determining_angle(self, x_pos, y_pos, x, y):
+        """считает кгол между двумя пикселями"""
+
+        # расчеты производятся относительно первого пикселя
         if y_pos != y or x_pos != x:
             turn = pi / 2 - asin(((y_pos - y) / (
                     (x_pos - x) ** 2 + (y_pos - y) ** 2) ** 0.5))
@@ -440,34 +429,40 @@ class Entity(pygame.sprite.Sprite):
             return 0
         return turn
 
-    def beam(self, x_start, y_start, x_end=False, y_end=False, turn=0, long=500, nesting=1):
-        '''рисует луч'''
-        accuracy = 40  # точность
+    def beam(self, x_start, y_start, x_end=False, y_end=False, turn=0, long=500, nesting=1, accuracy=0):
+        """рисует луч с учетом пересечений со стенами"""
+        # вернет кортеж, где первый аргумент - смог ли луч добрать до конечной точки,
+        # а второй - точку где он впервые пересек стену или дверь
+
+        # выставляет значение точности
+        if accuracy == 0:
+            if nesting == 1:
+                accuracy = 40
+            else:
+                accuracy = 15
+
+        # подсчитывае скорость перемещения пикселя "проверки"
         if x_end and y_end:
             x_speed = (x_end - x_start) / accuracy
             y_speed = (y_end - y_start) / accuracy
         else:
             x_speed = -sin(radians(turn)) * long / accuracy
             y_speed = -cos(radians(turn)) * long / accuracy
-        dist = accuracy
+
+        # находит первое пересение луча со стеной или дверью
         for i in range(0, accuracy + 1):
             x, y = int(x_start + x_speed * i), int(y_start + y_speed * i)
-            if defining_intersection(translation_coordinates(x, y), 1,
-                                     1):
-                dist = i
-                if nesting==1:
-                    return (False, self.beam(x-x_speed, y-y_speed,x_end=x,y_end=y,nesting=2)[1])
+            if defining_intersection(translation_coordinates(x, y), 1, 1):
+                if nesting == 1:
+                    return (False, self.beam(x - x_speed, y - y_speed, x_end=x, y_end=y, nesting=2)[1])
                 else:
                     return (False, (x, y))
-        # pygame.draw.line(screen, pygame.Color('red'), (x_start, y_start),
-        #                  (x, y))
-        # if dist == accuracy:
-        #     return (True, (x, y))
         return (True, (x, y))
 
 
 class Player(Entity):
     """Класс игрока"""
+
     def __init__(self, x, y):
         super().__init__(x, y)
         self.weapon_list = [Shotgun(self), Ak_47(self), Knife(self)]
@@ -476,6 +471,7 @@ class Player(Entity):
         self.range = 15000
         self.wall_hitbox = self.rect
         self.wall_hitbox.h = self.wall_hitbox.w = 54
+
         # self.wall_hitbox.move(1, 1)
 
     def get_current_weapon(self):
@@ -520,17 +516,20 @@ class Player(Entity):
         return nearest_lootbox
 
     def tracing(self):
-        self.viewing_angle = 50
-        coord = [(700,350)]
-        #coord_end = self.beam(700, 350, turn=self.direction - self.viewing_angle / 2, long=500)[1]
-        for i in range(self.viewing_angle // 2):
-            coord.append(  self.beam(700, 350, turn=self.direction - self.viewing_angle / 2 + i * 2, long=500)[1])
-            #draw_polygon_alpha(screen, (252,251,177,100),(coord_end,coord_now,(700,350)))
-            #pygame.draw.polygon(screen, (252,251,177,100), (coord_end,coord_now,(700,350)))
-            #coord_end=coord_now
-        coord.append((700,350))
-        # draw_polygon_alpha(screen, (252, 251, 177, 51), coord)
-        draw_flashlight(coord, (252, 251, 177, 51))
+        """происходит трассировка лучей для фонарика"""
+
+        self.viewing_angle = 60  # угол обзора
+        coord = [(width // 2, height // 2)]  # массив координат многоугольника, для создания фонаря (видимости)
+        turn = 1  # частота пускания лучей (угол между соседними лучами)
+
+        # выполняется трассировка
+        for i in range(int(self.viewing_angle / turn) + 1):
+            coord.append(
+                self.beam(width // 2, height // 2,
+                          turn=self.direction - self.viewing_angle / 2 + i * turn, long=500)[1])
+        coord.append((width // 2, height // 2))
+
+        draw_flashlight(coord, (255, 255, 173, 50))
 
     def update(self):
         xshift = 0
@@ -557,6 +556,12 @@ class Player(Entity):
         self.wall_hitbox.y += yshift
         self.image = pygame.transform.rotate(im1, self.direction)
         self.rect = self.image.get_rect(center=self.rect.center)
+        # for i in walls:
+        #     if type(i)==Wall:
+        #         if (i.rect.centerx-700)**2+(i.rect.centery-350)**2<=800**2:
+        #             i.rendering = True
+        #         else:
+        #             i.rendering = False
         # проверка, есть ли рядом ящики
         # for lootbox in lootboxes:
         #     if pygame.sprite.collide_rect(self, lootbox) and keystate[pygame.K_f]:
@@ -618,6 +623,7 @@ class Player(Entity):
 
 class Enemy(Entity):
     """Класс врага"""
+
     def __init__(self, trajectory, speed=2):
         super().__init__(trajectory[0][1], trajectory[0][2])
         enemies.add(self)
@@ -701,22 +707,33 @@ class Enemy(Entity):
 
 class Wall(pygame.sprite.Sprite):
     """Класс стены"""
+
     def __init__(self, x, y):
-        super().__init__(all_sprites, walls)
+        super().__init__(all_sprites, walls,walls_rendering)
         self.image = pygame.surface.Surface((100, 100))
         self.image.fill((128, 128, 128))
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
+        # self.rendering = True
+        # self.being_walls = True
 
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
         pass
+        # if self.rendering:
+        #     walls_rendering.add(self)
+        #     self.being_walls = True
+        # elif not self.rendering:
+        #     walls_rendering.remove(self)
+        #     self.being_walls = False
+
 
 
 class Door(pygame.sprite.Sprite):
     """Класс двери"""
+
     def __init__(self, x, y, direction):
         super().__init__(all_sprites, doors, doors_wall, walls)
         if direction == 0:
@@ -791,6 +808,7 @@ if __name__ == '__main__':
     pygame.mouse.set_visible(True)  # False на релизе
 
     walls = pygame.sprite.Group()  # стены
+    walls_rendering = pygame.sprite.Group()
     characters = pygame.sprite.Group()  # персонажи
     other_sprites = pygame.sprite.Group()  # все остальное
     all_sprites = pygame.sprite.Group()
@@ -829,7 +847,7 @@ if __name__ == '__main__':
     #     print(wall.rect.center)
     # tr = pygame.Surface((1400, 750))
     while running:
-        #tr.fill((0,0,0,0))
+        # tr.fill((0,0,0,0))
         # внутри игрового цикла ещё один цикл
         # приёма и обработки сообщений
         for event in pygame.event.get():
@@ -849,13 +867,21 @@ if __name__ == '__main__':
         for sprite in all_sprites:
             camera.apply(sprite)
         screen.fill('black')
+        player.tracing()
         other_sprites.draw(screen)
         walls.draw(screen)
-
+        # wallllll.rendering = True
+        # for i in walls:
+        #     i.update()
+        # walls_rendering.draw(screen)
         characters.draw(screen)
         other_sprites.draw(screen)
-        player.tracing()
         doors.draw(screen)
+        # затемнение экрана
+        surface2 = pygame.Surface(size)
+        surface2.set_alpha(140)
+        screen.blit(surface2, (0, 0))
+
         doors.update()
         for i in characters:
             i.rect = i.image.get_rect(size=(64, 64), center=i.rect.center)
