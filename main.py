@@ -465,6 +465,7 @@ class Player(Entity):
 
     def __init__(self, x, y):
         super().__init__(x, y)
+        characters_rendering.add(self)
         self.weapon_list = [Shotgun(self), Ak_47(self), Knife(self)]
         self.current_weapon = 1
         self.medkits = 0
@@ -531,6 +532,38 @@ class Player(Entity):
 
         draw_flashlight(coord, (255, 255, 173, 50))
 
+    def visible_objects(self):
+        for enemy in enemies:
+            dist = (enemy.real_posx - self.real_posx) ** 2 + (enemy.real_posy - self.real_posy) ** 2
+            if dist <= 10000:
+                enemy.distance_beam = [True, True]
+                if not enemy in characters_rendering:
+                    characters_rendering.add(enemy)
+            elif dist <= 530 ** 2:
+                if self.beam(self.rect.centerx, self.rect.centery, x_end=enemy.rect.centerx, y_end=enemy.rect.centery,
+                             accuracy=30, nesting=2)[0]:
+                    if abs(self.direction - self.determining_angle(self.rect.centerx, self.rect.centery,
+                                                                   enemy.rect.centerx,
+                                                                   enemy.rect.centery)) <= 34 or abs(
+                        self.direction - self.determining_angle(self.rect.centerx, self.rect.centery,
+                                                                enemy.rect.centerx,
+                                                                enemy.rect.centery)) >= 326:
+                        enemy.distance_beam = [False, True]
+                        if not enemy in characters_rendering:
+                            characters_rendering.add(enemy)
+                    else:
+                        enemy.distance_beam = [False, False]
+                        if enemy in characters_rendering:
+                            characters_rendering.remove(enemy)
+                else:
+                    enemy.distance_beam = [False, False]
+                    if enemy in characters_rendering:
+                        characters_rendering.remove(enemy)
+            else:
+                enemy.distance_beam = [False, False]
+                if enemy in characters_rendering:
+                    characters_rendering.remove(enemy)
+
     def update(self):
         xshift = 0
         yshift = 0
@@ -556,6 +589,8 @@ class Player(Entity):
         self.wall_hitbox.y += yshift
         self.image = pygame.transform.rotate(im1, self.direction)
         self.rect = self.image.get_rect(center=self.rect.center)
+        self.visible_objects()
+
         # for i in walls:
         #     if type(i)==Wall:
         #         if (i.rect.centerx-700)**2+(i.rect.centery-350)**2<=800**2:
@@ -636,6 +671,8 @@ class Enemy(Entity):
         self.stop = 0
         self.direction = 0
         self.reset_target = 0
+        self.distance_beam = [False,
+                              False]  # первая означает персонаж находится "вплотную", вторая-луч не пересекат стен и расстояние "небольшое"
 
     # def is_visible(self):
     #     if (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 > 250000:
@@ -645,15 +682,16 @@ class Enemy(Entity):
     #     elif self.beam(player.rect.x, player.rect.y, self.rect.x, self.rect.y)
 
     def detection_player(self):
-        if abs(self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
-                                                       player.rect.centery)) <= 30 or abs(
-            self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
-                                                    player.rect.centery)) >= 330:
-            if (self.rect.centerx - player.rect.centerx) ** 2 + (self.rect.centery - player.rect.centery) ** 2 <= 90000:
-                if self.beam(self.rect.centerx, self.rect.centery, x_end=player.rect.centerx,
-                             y_end=player.rect.centery)[0]:
-                    self.reset_target = 0
-                    self.detection = True
+        if self.distance_beam[0]:
+            self.reset_target = 0
+            self.detection = True
+        elif self.distance_beam[1]:
+            if abs(self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
+                                                           player.rect.centery)) <= 30 or abs(
+                self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
+                                                        player.rect.centery)) >= 330:
+                self.reset_target = 0
+                self.detection = True
         if self.detection:
             self.reset_target += 1
         if self.reset_target >= 300:
@@ -709,7 +747,7 @@ class Wall(pygame.sprite.Sprite):
     """Класс стены"""
 
     def __init__(self, x, y):
-        super().__init__(all_sprites, walls,walls_rendering)
+        super().__init__(all_sprites, walls, walls_rendering)
         self.image = pygame.surface.Surface((100, 100))
         self.image.fill((128, 128, 128))
         self.rect = self.image.get_rect()
@@ -728,7 +766,6 @@ class Wall(pygame.sprite.Sprite):
         # elif not self.rendering:
         #     walls_rendering.remove(self)
         #     self.being_walls = False
-
 
 
 class Door(pygame.sprite.Sprite):
@@ -815,6 +852,7 @@ if __name__ == '__main__':
     bullets = pygame.sprite.Group()
     lootboxes = pygame.sprite.Group()  # ящики
     enemies = pygame.sprite.Group()
+    characters_rendering = pygame.sprite.Group()
     doors = pygame.sprite.Group()
     wall_boundaries = pygame.sprite.Group()
     doors_wall = pygame.sprite.Group()
@@ -874,7 +912,7 @@ if __name__ == '__main__':
         # for i in walls:
         #     i.update()
         # walls_rendering.draw(screen)
-        characters.draw(screen)
+        characters_rendering.draw(screen)
         other_sprites.draw(screen)
         doors.draw(screen)
         # затемнение экрана
