@@ -15,7 +15,7 @@ def pic_to_map(filename):
             if pixels[i, j] == (237, 28, 36, 255):  # 237,28,36 / 0,0,0
                 Wall(i * 100, j * 100)
                 result[i][j] = True
-            elif pixels[i, j] == (34, 177, 76, 255):
+            elif pixels[i, j] == (34, 177, 77, 255):
                 Door(i * 100, j * 100, 0)
                 result[i][j] = [True, 0]
             elif pixels[i, j] == (136, 177, 77, 255):
@@ -74,7 +74,17 @@ def draw_polygon_alpha(surface, color, points):
     pygame.draw.polygon(shape_surf, color, [(x - min_x, y - min_y) for x, y in points])
     surface.blit(shape_surf, target_rect)
 
+
+def draw_flashlight(points, color):
+    surface1 = pygame.Surface(size)
+    pygame.draw.polygon(surface1, color, points)
+    pygame.draw.polygon(surface1, (255, 255, 255), points, width=2)
+    surface1.set_alpha(192)
+    screen.blit(surface1, (0, 0))
+
+
 class Weapon:
+    """Общий класс оружия"""
     def __init__(self, speed, damage, frequency, clip_size, ammo, reload_time, who, queue=-1):
         self.speed = speed
         self.damage = damage
@@ -91,13 +101,30 @@ class Weapon:
         self.reload_time = reload_time  # время перезарядки (в мс)
         self.reload_progress = self.reload_time
 
+    def spawn_bullet(self, damage, turn):
+        turn = self.who.direction + random.randint(-self.spread_now,
+                                                   self.spread_now)
+        Bullet(self.who.rect.centerx - sin(
+                radians(turn)) * 55, self.who.rect.centery - cos(
+                radians(turn)) * 55,
+            -sin(radians(turn)) * self.speed,
+            -cos(radians(turn)) * self.speed, damage=damage)
+
+    def reload_update(self):
+        self.reload_progress += 1
+        if self.reload_progress == self.reload_time:
+            prev_ammo = self.clip
+            self.clip = min(self.clip_size, self.ammo + self.clip)
+            self.ammo -= self.clip - prev_ammo
+
+    def check_reload_start(self):
+        if pygame.key.get_pressed()[
+                pygame.K_r] and self.reload_progress == self.reload_time and self.clip != self.clip_size:
+            self.reload_progress = 0
+
     def update(self):
         if self.reload_progress < self.reload_time:
-            self.reload_progress += 1
-            if self.reload_progress == self.reload_time:
-                prev_ammo = self.clip
-                self.clip = min(self.clip_size, self.ammo + self.clip)
-                self.ammo -= self.clip - prev_ammo
+            self.reload_update()
         else:
             if self.clip > 0:
                 if pygame.mouse.get_pressed()[0] and self.frequency_now <= 0:
@@ -110,10 +137,11 @@ class Weapon:
                     # print(self.spread_now)
                     # стрельба
                     turn = self.who.direction + random.randint(-self.spread_now, self.spread_now)
-                    Bullet(self.who.rect.centerx - sin(radians(turn)) * 55,
-                           self.who.rect.centery - cos(radians(turn)) * 55,
-                           -sin(radians(turn)) * self.speed,
-                           -cos(radians(turn)) * self.speed, damage=self.damage)
+                    # Bullet(self.who.rect.centerx - sin(radians(turn)) * 55,
+                    #        self.who.rect.centery - cos(radians(turn)) * 55,
+                    #        -sin(radians(turn)) * self.speed,
+                    #        -cos(radians(turn)) * self.speed, damage=self.damage)
+                    self.spawn_bullet(damage=self.damage, turn=self.who.direction)
                     self.frequency_now = self.frequency
                     self.clip -= 1
                     # перезарядка если пуль не осталось
@@ -124,9 +152,7 @@ class Weapon:
                     self.frequency_now = 0
                     self.queue_counter = 0
                 # перезарядка по кнопке R
-                if pygame.key.get_pressed()[
-                    pygame.K_r] and self.reload_progress == self.reload_time and self.clip != self.clip_size:
-                    self.reload_progress = 0
+                self.check_reload_start()
 
     def draw_interface(self):
         """Отрисовка интерфейса оружия"""
@@ -150,9 +176,43 @@ class SniperRifle(Weapon):
 
 class Ak_47(Weapon):
     def __init__(self, whose):
-        super().__init__(speed=50, damage=10, frequency=5,
+        super().__init__(speed=60, damage=10, frequency=5,
                          clip_size=1000, ammo=100, who=whose, reload_time=3 * FPS, queue=15)
         self.interface_image = ak_47_image
+
+
+class Shotgun(Weapon):
+    def __init__(self, whose):
+        super().__init__(speed=40, damage=7, frequency=50, clip_size=8, ammo=40, who=whose, reload_time=240)
+        self.interface_image = shotgun_image
+
+    def spawn_bullet(self, turn, damage):
+        for _ in range(9):
+            pellet_spread = random.randint(-9, 9)
+            turn += pellet_spread
+            ShotgunBullet(self.who.rect.centerx - sin(
+                radians(turn)) * 55, self.who.rect.centery - cos(
+                radians(turn)) * 55,
+            -sin(radians(turn)) * self.speed,
+            -cos(radians(turn)) * self.speed, damage=damage)
+
+    def reload_update(self):
+        self.reload_progress += 1
+        if self.reload_progress % 30 == 0 and self.reload_progress != self.reload_time:
+            if self.ammo != 0:
+                self.clip += 1
+                self.ammo -= 1
+                if self.ammo == 0:
+                    self.reload_progress = self.reload_time
+        if self.reload_progress == self.reload_time:
+            prev_ammo = self.clip
+            self.clip = min(self.clip_size, self.ammo + self.clip)
+            self.ammo -= self.clip - prev_ammo
+
+    def check_reload_start(self):
+        if pygame.key.get_pressed()[
+            pygame.K_r] and self.reload_progress == self.reload_time and self.clip != self.clip_size:
+            self.reload_progress = self.clip * 30
 
 
 class Knife:
@@ -234,7 +294,7 @@ class Bullet(pygame.sprite.Sprite):
 
     def __init__(self, x, y, speed_x, speed_y, damage):
         super().__init__(all_sprites, bullets)
-        self.image = pygame.surface.Surface((10, 10))
+        self.image = pygame.surface.Surface((5, 5))
         self.image.fill((255, 255, 255))
         self.rect = self.image.get_rect()
         self.rect.centerx = x
@@ -263,7 +323,23 @@ class Bullet(pygame.sprite.Sprite):
                 self.kill()
 
 
+class ShotgunBullet(Bullet):
+    """Класс пули дробовика"""
+    def __init__(self, x, y, speed_x, speed_y, damage):
+        super().__init__(x, y, speed_x, speed_y, damage)
+        self.image = pygame.Surface((3, 3))
+        self.image.fill('white')
+        self.timer = 0
+
+    def update(self):
+        super().update()
+        self.timer += 1
+        if self.timer > 8:
+            self.kill()
+
+
 class Entity(pygame.sprite.Sprite):
+    """Общий класс сущности"""
     def __init__(self, x, y):
         super().__init__(all_sprites, characters)
         self.image = im1
@@ -391,9 +467,10 @@ class Entity(pygame.sprite.Sprite):
 
 
 class Player(Entity):
+    """Класс игрока"""
     def __init__(self, x, y):
         super().__init__(x, y)
-        self.weapon_list = [SniperRifle(self), Ak_47(self), Knife(self)]
+        self.weapon_list = [Shotgun(self), Ak_47(self), Knife(self)]
         self.current_weapon = 1
         self.medkits = 0
         self.range = 15000
@@ -446,13 +523,14 @@ class Player(Entity):
         self.viewing_angle = 50
         coord = [(700,350)]
         #coord_end = self.beam(700, 350, turn=self.direction - self.viewing_angle / 2, long=500)[1]
-        for i in range(self.viewing_angle):
-            coord.append(  self.beam(700, 350, turn=self.direction - self.viewing_angle / 2 + i, long=500)[1])
+        for i in range(self.viewing_angle // 2):
+            coord.append(  self.beam(700, 350, turn=self.direction - self.viewing_angle / 2 + i * 2, long=500)[1])
             #draw_polygon_alpha(screen, (252,251,177,100),(coord_end,coord_now,(700,350)))
             #pygame.draw.polygon(screen, (252,251,177,100), (coord_end,coord_now,(700,350)))
             #coord_end=coord_now
         coord.append((700,350))
-        draw_polygon_alpha(screen, (252, 251, 177, 51), coord)
+        # draw_polygon_alpha(screen, (252, 251, 177, 51), coord)
+        draw_flashlight(coord, (252, 251, 177, 51))
 
     def update(self):
         xshift = 0
@@ -539,6 +617,7 @@ class Player(Entity):
 
 
 class Enemy(Entity):
+    """Класс врага"""
     def __init__(self, trajectory, speed=2):
         super().__init__(trajectory[0][1], trajectory[0][2])
         enemies.add(self)
@@ -551,6 +630,13 @@ class Enemy(Entity):
         self.stop = 0
         self.direction = 0
         self.reset_target = 0
+
+    # def is_visible(self):
+    #     if (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 > 250000:
+    #         return False
+    #     elif (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 < 10000:
+    #         return True
+    #     elif self.beam(player.rect.x, player.rect.y, self.rect.x, self.rect.y)
 
     def detection_player(self):
         if abs(self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
@@ -614,6 +700,7 @@ class Enemy(Entity):
 
 
 class Wall(pygame.sprite.Sprite):
+    """Класс стены"""
     def __init__(self, x, y):
         super().__init__(all_sprites, walls)
         self.image = pygame.surface.Surface((100, 100))
@@ -629,6 +716,7 @@ class Wall(pygame.sprite.Sprite):
 
 
 class Door(pygame.sprite.Sprite):
+    """Класс двери"""
     def __init__(self, x, y, direction):
         super().__init__(all_sprites, doors, doors_wall, walls)
         if direction == 0:
@@ -636,7 +724,10 @@ class Door(pygame.sprite.Sprite):
         elif direction == 1:
             self.image = pygame.Surface((100, 20))
         self.rect = self.image.get_rect()
-        self.rect.center = (x, y)
+        self.rect.center = x, y
+
+        # self.rect = self.image.get_rect()
+        # self.rect.center = (x, y)
         self.constx = x
         self.consty = y
         self.image.fill((128, 0, 0))
@@ -710,14 +801,16 @@ if __name__ == '__main__':
     wall_boundaries = pygame.sprite.Group()
     doors_wall = pygame.sprite.Group()
 
-    sniper_rifle_image = pygame.image.load('sniper_rifle2.png').convert()
+    sniper_rifle_image = pygame.image.load('assets/sniper_rifle2.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
-    ak_47_image = pygame.image.load('ak_47_image2.png').convert()
+    ak_47_image = pygame.image.load('assets/ak_47_image2.png').convert()
     ak_47_image.set_colorkey((255, 255, 255))
-    im1 = pygame.image.load('Игрок_2.png').convert()
+    im1 = pygame.image.load('assets/Игрок_2.png').convert()
     im1.set_colorkey((255, 255, 255))
-    knife_image = pygame.image.load('knife_image.png').convert()
+    knife_image = pygame.image.load('assets/knife_image.png').convert()
     knife_image.set_colorkey((255, 255, 255))
+    shotgun_image = pygame.image.load('assets/shotgun_image.png').convert()
+    shotgun_image.set_colorkey((255, 255, 255))
 
     running = True
     Bullet(10, 10, 1.4, 3.8, damage=10)
@@ -731,7 +824,7 @@ if __name__ == '__main__':
 
     player = Player(4500, 4200)  # 550, 550
 
-    wall_layout = pic_to_map('map50.png')  # массив из пикселей картинки, где находится стена
+    wall_layout = pic_to_map('assets/map50.png')  # массив из пикселей картинки, где находится стена
     # for wall in walls:
     #     print(wall.rect.center)
     # tr = pygame.Surface((1400, 750))
@@ -758,9 +851,10 @@ if __name__ == '__main__':
         screen.fill('black')
         other_sprites.draw(screen)
         walls.draw(screen)
+
         characters.draw(screen)
         other_sprites.draw(screen)
-        walls.draw(screen)
+        player.tracing()
         doors.draw(screen)
         doors.update()
         for i in characters:
@@ -774,7 +868,7 @@ if __name__ == '__main__':
             lootbox.draw_open_progress()
         enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery, player.rect.centerx,
                     player.rect.centery)
-        player.tracing()
+        # player.tracing()
         pygame.draw.rect(screen, 'red', player.rect, width=1)
         pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
         # print(player.wall_hitbox.center, '/', player.rect.center)
