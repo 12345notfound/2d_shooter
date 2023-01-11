@@ -14,13 +14,13 @@ def pic_to_map(filename):
     result = [[False for _ in range(y)] for _ in range(x)]
     for i in range(x):
         for j in range(y):
-            if pixels[i, j] == (237, 28, 36, 255):  # 237,28,36 / 0,0,0
+            if pixels[i, j] == (237, 28, 36):  # 237,28,36 / 0,0,0
                 Wall(i * 100, j * 100)
                 result[i][j] = True
-            elif pixels[i, j] == (102, 177, 77, 255):
+            elif pixels[i, j] == (102, 177, 77):
                 Door(i * 100, j * 100, 0)
                 result[i][j] = [True, 0]
-            elif pixels[i, j] == (68, 177, 77, 255):
+            elif pixels[i, j] == (68, 177, 77):
                 Door(i * 100, j * 100, 1)
                 result[i][j] = [True, 1]
 
