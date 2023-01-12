@@ -198,14 +198,14 @@ class Ak_47(Weapon):
 
 class Glock(Weapon):
     def __init__(self, whose):
-        super().__init__(speed=50, damage=10, frequency=15, clip_size=17, ammo=85, reload_time=28, who=whose)
+        super().__init__(speed=50, damage=10, frequency=15, clip_size=17, ammo=85, reload_time=30, who=whose)
         self.interface_image = glock_image
-        self.reload_anim_frames = 14
+        self.reload_anim_frames = 15
 
 
 class Shotgun(Weapon):
     def __init__(self, whose):
-        super().__init__(speed=40, damage=7, frequency=50, clip_size=8, ammo=40, who=whose, reload_time=240)
+        super().__init__(speed=40, damage=7, frequency=50, clip_size=8, ammo=40, who=whose, reload_time=320)
         self.interface_image = shotgun_image
         self.reload_anim_frames = 20
 
@@ -218,10 +218,11 @@ class Shotgun(Weapon):
                 radians(turn)) * 55,
                           -sin(radians(turn)) * self.speed,
                           -cos(radians(turn)) * self.speed, damage=damage)
+        self.who.is_attacking = True
 
     def reload_update(self):
         self.reload_progress += 1
-        if self.reload_progress % 30 == 0 and self.reload_progress != self.reload_time:
+        if self.reload_progress % (self.reload_time // self.clip_size) == 0 and self.reload_progress != self.reload_time:
             if self.ammo != 0:
                 self.clip += 1
                 self.ammo -= 1
@@ -235,7 +236,7 @@ class Shotgun(Weapon):
     def check_reload_start(self):
         if pygame.key.get_pressed()[
             pygame.K_r] and self.reload_progress == self.reload_time and self.clip != self.clip_size:
-            self.reload_progress = self.clip * 30
+            self.reload_progress = self.clip * (self.reload_time // self.clip_size)
 
 
 class Knife:
@@ -243,7 +244,7 @@ class Knife:
         self.damage = 20
         self.frequency = 1
         self.frequency_now = 0
-        self.range_squared = 4900
+        self.range_squared = 10000
         self.interface_image = knife_image
         self.attack_anim_frames = 15
         self.who = whose
@@ -261,7 +262,7 @@ class Knife:
             if nearest_enemy is not None and (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 \
                     + (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 <= self.range_squared:
                 nearest_enemy.take_damage(self.damage)
-                self.who.is_attacking = True
+            self.who.is_attacking = True
 
     def draw_interface(self):
         """Отрисовка интерфейса оружия"""
@@ -393,6 +394,12 @@ class Entity(pygame.sprite.Sprite):
         self.anim_reload_cnt = 0
         self.is_attacking = False
         self.anim_attack_cnt = 0
+
+    def reset_reload_attack(self):
+        self.is_reloading = False
+        self.is_attacking = False
+        self.anim_attack_cnt = 0
+        self.anim_reload_cnt = 0
 
     def anim_reload_update(self):
         weapon = self.get_current_weapon()
@@ -590,7 +597,7 @@ class Player(Entity):
     def __init__(self, x, y):
         super().__init__(x, y)
         characters_rendering.add(self)
-        self.weapon_list = [Ak_47(self), Glock(self), Knife(self)]
+        self.weapon_list = [Shotgun(self), Glock(self), Knife(self)]
         self.current_weapon = 1
         self.medkits = 0
         self.range = 15000
@@ -723,16 +730,19 @@ class Player(Entity):
                         self.get_current_weapon()) == Knife or self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
                 self.get_current_weapon().reload_progress = 0
             self.current_weapon = 0
+            self.reset_reload_attack()
         elif keystate[pygame.K_2]:
             if self.current_weapon != 1 and (
                     type(
                         self.get_current_weapon()) == Knife or self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
                 self.get_current_weapon().reload_progress = 0
             self.current_weapon = 1
+            self.reset_reload_attack()
         elif keystate[pygame.K_3]:
             if self.current_weapon != 2 and self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time:
                 self.get_current_weapon().reload_progress = 0
             self.current_weapon = 2
+            self.reset_reload_attack()
 
         # проверка на аптечку
         if keystate[pygame.K_4] and self.medkits != 0:
