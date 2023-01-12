@@ -1,3 +1,5 @@
+import os
+
 import pygame
 import random
 from math import sin, radians, cos, asin, pi, degrees
@@ -27,10 +29,12 @@ def pic_to_map(filename):
     # возвращает массив с расположнием стен и дверей
     return result
 
-
+const = 0
+constx = -1
+consty = -1
 def translation_coordinates(x, y):
     '''переводит аюсолютную координату относительно расположения пикселя на карте'''
-    return (x + player.real_posx - player.rect.centerx + 37, y + player.real_posy - player.rect.centery + 37)
+    return (x + player.real_posx - player.rect.centerx + constx, y + player.real_posy - player.rect.centery + consty)
 
 
 def data_translation(pixelx, pixely):
@@ -106,6 +110,8 @@ class Weapon:
         self.ammo = ammo  # кол-во патронов вне магазина
         self.reload_time = reload_time  # время перезарядки (в мс)
         self.reload_progress = self.reload_time
+        self.reload_anim_frames = 0
+        self.attack_anim_frames = 3
 
     def spawn_bullet(self, damage, turn):
         turn = self.who.direction + random.randint(-self.spread_now,
@@ -115,6 +121,8 @@ class Weapon:
             radians(turn)) * 55,
                -sin(radians(turn)) * self.speed,
                -cos(radians(turn)) * self.speed, damage=damage)
+        self.who.is_attacking = True
+
 
     def reload_update(self):
         self.reload_progress += 1
@@ -185,12 +193,21 @@ class Ak_47(Weapon):
         super().__init__(speed=60, damage=10, frequency=5,
                          clip_size=1000, ammo=100, who=whose, reload_time=3 * FPS, queue=15)
         self.interface_image = ak_47_image
+        self.reload_anim_frames = 20
+
+
+class Glock(Weapon):
+    def __init__(self, whose):
+        super().__init__(speed=50, damage=10, frequency=15, clip_size=17, ammo=85, reload_time=28, who=whose)
+        self.interface_image = glock_image
+        self.reload_anim_frames = 14
 
 
 class Shotgun(Weapon):
     def __init__(self, whose):
         super().__init__(speed=40, damage=7, frequency=50, clip_size=8, ammo=40, who=whose, reload_time=240)
         self.interface_image = shotgun_image
+        self.reload_anim_frames = 20
 
     def spawn_bullet(self, turn, damage):
         for _ in range(9):
@@ -228,6 +245,8 @@ class Knife:
         self.frequency_now = 0
         self.range_squared = 4900
         self.interface_image = knife_image
+        self.attack_anim_frames = 15
+        self.who = whose
 
     def update(self):
         if pygame.mouse.get_pressed()[0]:
@@ -242,6 +261,7 @@ class Knife:
             if nearest_enemy is not None and (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 \
                     + (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 <= self.range_squared:
                 nearest_enemy.take_damage(self.damage)
+                self.who.is_attacking = True
 
     def draw_interface(self):
         """Отрисовка интерфейса оружия"""
@@ -362,6 +382,109 @@ class Entity(pygame.sprite.Sprite):
         self.damage = 5
         self.direction = 0
 
+        # атрибуты, отвечающие за анимации
+        self.is_idle = True
+        self.anim_idle_cnt = 0
+        self.is_moving = False
+        self.anim_move_cnt = 0
+        self.prev_pos = self.rect.center
+
+        self.is_reloading = False
+        self.anim_reload_cnt = 0
+        self.is_attacking = False
+        self.anim_attack_cnt = 0
+
+    def anim_reload_update(self):
+        weapon = self.get_current_weapon()
+        if type(weapon) == Knife:
+            self.is_reloading = False
+            self.anim_reload_cnt = 0
+        if not self.is_reloading:
+            self.anim_reload_cnt = 0
+        else:
+            self.anim_reload_cnt += 1
+            if self.anim_reload_cnt == 3 * weapon.reload_anim_frames:
+                self.anim_reload_cnt = 0
+                self.is_reloading = False
+
+    def anim_attack_update(self):
+        weapon = self.get_current_weapon()
+        if not self.is_attacking:
+            self.anim_attack_cnt = 0
+        else:
+            self.anim_attack_cnt += 1
+            if self.anim_attack_cnt == 3 * weapon.attack_anim_frames:
+                self.anim_attack_cnt = 0
+                self.is_attacking = False
+
+    def anim_is_idle_update(self):
+        if self.rect.center != self.prev_pos:
+            self.anim_idle_cnt = 0
+            self.is_idle = False
+            self.is_moving = True
+        else:
+            self.is_idle = True
+            self.is_moving = False
+            self.anim_idle_cnt = (self.anim_idle_cnt + 1) % 60
+
+    def anim_is_moving_update(self):
+        if self.rect.center == self.prev_pos:
+            self.anim_move_cnt = 0
+            self.is_moving = False
+            self.is_idle = True
+        else:
+            self.is_moving = True
+            self.is_idle = False
+            self.anim_move_cnt = (self.anim_move_cnt + 1) % 60
+
+    def all_anims_update(self):
+        """Обновляет все счетчики анимаций"""
+        self.anim_is_moving_update()
+        self.anim_attack_update()
+        self.anim_is_idle_update()
+        self.anim_reload_update()
+
+    def get_current_state(self):
+        """Возвращает текущее состояние сущности:
+        атака - 0, перезарядка - 1, движение - 2, безделье - 3
+        (состояние с меньшим номером имеет больший приоритет)"""
+        if self.is_attacking:
+            self.is_reloading = False
+            return 0
+        elif self.is_reloading:
+            self.is_attacking = False
+            return 1
+        elif self.is_moving:
+            self.is_idle = False
+            return 2
+        elif self.is_idle:
+            self.is_moving = False
+            return 3
+
+    def get_current_image_info(self):
+        """Возвращает кортеж из трех значений: оружия, состояния и номера кадра"""
+        state = self.get_current_state()
+        weapon = self.get_current_weapon()
+        if type(weapon) == Knife:
+            weapontype = 'knife'
+        elif type(weapon) == Ak_47:
+            weapontype = 'rifle'
+        elif type(weapon) == Shotgun:
+            weapontype = 'shotgun'
+        elif type(weapon) == Glock:
+            weapontype = 'handgun'
+        if state == 0:
+            frame_num = self.anim_attack_cnt
+        elif state == 1:
+            frame_num = self.anim_reload_cnt
+        elif state == 2:
+            frame_num = self.anim_move_cnt
+        elif state == 3:
+            frame_num = self.anim_idle_cnt
+        states = ['shoot', 'reload', 'move', 'idle']
+
+        return weapontype, states[state], frame_num // 3
+
     def take_damage(self, damage):
         self.health -= damage
         if self.health <= 0:
@@ -369,19 +492,20 @@ class Entity(pygame.sprite.Sprite):
 
     def move_entity(self, x, y):
         """Переместить сущность на координаты х, y"""
+        self.prev_pos = self.rect.center  # для анимаций
         start_x, start_y = self.real_posx, self.real_posy
         self.real_posx = start_x + x
         self.real_posy = start_y + y
         x_move, y_move, xy_move = True, True, True
-        if defining_intersection((self.real_posx - 32 + 37, self.real_posy - 32 + 37), 64, 64):
+        if defining_intersection((self.real_posx - 32 + constx, self.real_posy - 32 + consty), 64, 64):
             xy_move = False
         self.real_posx = start_x + x
         self.real_posy = start_y
-        if defining_intersection((self.real_posx - 32 + 37, self.real_posy - 32 + 37), 64, 64):
+        if defining_intersection((self.real_posx - 32 + constx, self.real_posy - 32 + consty), 64, 64):
             x_move = False
         self.real_posx = start_x
         self.real_posy = start_y + y
-        if defining_intersection((self.real_posx - 32 + 37, self.real_posy - 32 + 37), 64, 64):
+        if defining_intersection((self.real_posx - 32 + constx, self.real_posy - 32 + consty), 64, 64):
             y_move = False
         if xy_move:
             self.movement = True
@@ -466,7 +590,7 @@ class Player(Entity):
     def __init__(self, x, y):
         super().__init__(x, y)
         characters_rendering.add(self)
-        self.weapon_list = [Shotgun(self), Ak_47(self), Knife(self)]
+        self.weapon_list = [Ak_47(self), Glock(self), Knife(self)]
         self.current_weapon = 1
         self.medkits = 0
         self.range = 15000
@@ -587,22 +711,10 @@ class Player(Entity):
         self.move_entity(xshift, yshift)
         self.wall_hitbox.x += xshift
         self.wall_hitbox.y += yshift
-        self.image = pygame.transform.rotate(im1, self.direction)
-        self.rect = self.image.get_rect(center=self.rect.center)
+        # self.image = pygame.transform.rotate(im1, self.direction + 90)
+        # self.rect = self.image.get_rect(center=self.rect.center)
         self.visible_objects()
 
-        # for i in walls:
-        #     if type(i)==Wall:
-        #         if (i.rect.centerx-700)**2+(i.rect.centery-350)**2<=800**2:
-        #             i.rendering = True
-        #         else:
-        #             i.rendering = False
-        # проверка, есть ли рядом ящики
-        # for lootbox in lootboxes:
-        #     if pygame.sprite.collide_rect(self, lootbox) and keystate[pygame.K_f]:
-        #         lootbox.add_timer()
-        #     else:
-        #         lootbox.reset_timer()
 
         # проверка на смену оружия
         if keystate[pygame.K_1]:
@@ -654,6 +766,11 @@ class Player(Entity):
         else:
             for lootbox in lootboxes:
                 lootbox.reset_timer()
+        self.all_anims_update()
+        current_image = player_anim.get_current_image(
+            *self.get_current_image_info())
+        self.image = pygame.transform.rotate(current_image, self.direction + 90)
+        self.rect = self.image.get_rect(center=self.rect.center)
 
 
 class Enemy(Entity):
@@ -673,6 +790,7 @@ class Enemy(Entity):
         self.reset_target = 0
         self.distance_beam = [False,
                               False]  # первая означает персонаж находится "вплотную", вторая-луч не пересекат стен и расстояние "небольшое"
+
 
     # def is_visible(self):
     #     if (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 > 250000:
@@ -835,6 +953,38 @@ class Camera:
         self.dy = -(target.rect.y + target.rect.h // 2 - height // 2)
 
 
+class PlayerAnimation:
+    def __init__(self):
+        self.animations = \
+            {'handgun': {
+                'idle': [],
+                'move': [],
+                'reload': [],
+                'shoot': []},
+            'knife': {
+                'idle': [],
+                'shoot': [],
+                'move': []},
+            'rifle': {
+                'idle': [],
+                'move': [],
+                'reload': [],
+                'shoot': []},
+            'shotgun': {
+                'idle': [],
+                'move': [],
+                'reload': [],
+                'shoot': []}}
+        for cdir, dirs, files in os.walk('assets/player_sprites'):
+            for file in files:
+                a1, a2 = cdir.split('\\')[1:]
+                self.animations[a1][a2].append(pygame.image.load(f'{cdir}\\{file}'))
+        # print(self.animations)
+
+    def get_current_image(self, weapon, state, frame_num):
+        return self.animations[weapon][state][frame_num]
+
+
 if __name__ == '__main__':
 
     FPS = 60
@@ -861,6 +1011,8 @@ if __name__ == '__main__':
     sniper_rifle_image.set_colorkey((255, 255, 255))
     ak_47_image = pygame.image.load('assets/ak_47_image2.png').convert()
     ak_47_image.set_colorkey((255, 255, 255))
+    glock_image = pygame.image.load('assets/glock_image.png').convert()
+    glock_image.set_colorkey((255, 255, 255))
     im1 = pygame.image.load('assets/Игрок_2.png').convert()
     im1.set_colorkey((255, 255, 255))
     knife_image = pygame.image.load('assets/knife_image.png').convert()
@@ -868,6 +1020,10 @@ if __name__ == '__main__':
     shotgun_image = pygame.image.load('assets/shotgun_image.png').convert()
     shotgun_image.set_colorkey((255, 255, 255))
 
+    im1 = pygame.image.load('1.png').convert()
+    im1.set_colorkey((0, 0, 0))
+
+    player_anim = PlayerAnimation()
     running = True
     Bullet(10, 10, 1.4, 3.8, damage=10)
     # LootBox(200, 200)
@@ -878,7 +1034,7 @@ if __name__ == '__main__':
     enemy1 = Enemy([['go', 4500, 4200], ['go', 4400, 4150], ['go', 250, 100], ['go', 500, 100],
                     ['stop', 100], ['go', 100, 100]])
 
-    player = Player(4500, 4200)  # 550, 550
+    player = Player(4500, 4250)  # 550, 550
 
     wall_layout = pic_to_map('assets/map50.png')  # массив из пикселей картинки, где находится стена
     # for wall in walls:
@@ -916,29 +1072,38 @@ if __name__ == '__main__':
         other_sprites.draw(screen)
         doors.draw(screen)
         # затемнение экрана
-        surface2 = pygame.Surface(size)
-        surface2.set_alpha(140)
-        screen.blit(surface2, (0, 0))
+        # surface2 = pygame.Surface(size)
+        # surface2.set_alpha(140)
+        # screen.blit(surface2, (0, 0))
 
         doors.update()
         for i in characters:
             i.rect = i.image.get_rect(size=(64, 64), center=i.rect.center)
-        # print(player.real_posx, player.real_posy)
         bullets.update()
-        # print(clock.get_fps())
         bullets.draw(screen)
-        player.draw_health_bar('green', player.health)
+        # player.draw_health_bar('green', player.health)
         for lootbox in lootboxes:
             lootbox.draw_open_progress()
         enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery, player.rect.centerx,
                     player.rect.centery)
         # player.tracing()
-        pygame.draw.rect(screen, 'red', player.rect, width=1)
-        pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
-        # print(player.wall_hitbox.center, '/', player.rect.center)
-        # print(player.rect.size, player.wall_hitbox.size)
+        # pygame.draw.rect(screen, 'red', player.rect, width=1)
+        # pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
         screen.blit(pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True, 'red'), (100, 100))
+
+        # anim debug
+        screen.blit(pygame.font.Font(None, 40).render(str(player.get_current_state()), True,
+                                              'red'), (100, 200))
+        screen.blit(pygame.font.Font(None, 40).render(
+            f'i{player.anim_idle_cnt}/r{player.anim_reload_cnt}/a{player.anim_attack_cnt}/m{player.anim_move_cnt}', True,
+                                              'red'), (100, 300))
+        screen.blit(
+            pygame.font.Font(None, 40).render(
+                f'i{int(player.is_idle)}/r{int(player.is_reloading)}/a{int(player.is_attacking)}/m{int(player.is_moving)}', True,
+                                              'red'), (100, 400))
+
         player.draw_interface()
         clock.tick(FPS)
+        # screen.blit(tmp_image, (player.rect.x, player.rect.y))
         pygame.display.flip()
     pygame.quit()
