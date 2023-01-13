@@ -29,12 +29,16 @@ def pic_to_map(filename):
     # возвращает массив с расположнием стен и дверей
     return result
 
+
 const = 0
 constx = -1
 consty = -1
+
+
 def translation_coordinates(x, y):
     '''переводит аюсолютную координату относительно расположения пикселя на карте'''
-    return (x + player.real_posx - player.rect.centerx + constx, y + player.real_posy - player.rect.centery + consty)
+    return (x + player.real_posx - player.rect.centerx + constx,
+            y + player.real_posy - player.rect.centery + consty)
 
 
 def data_translation(pixelx, pixely):
@@ -61,10 +65,13 @@ def defining_intersection(coord, size_x, size_y):
     if size_x == 1 and size_y == 1:
         return data_translation(x_real, y_real)
     else:
-        return data_translation(x_real, y_real) or data_translation((x_real + size_x - 1),
-                                                                    (y_real + size_y - 1)) or \
-               data_translation((x_real + size_x - 1), y_real) or data_translation(x_real,
-                                                                                   (y_real + size_y - 1))
+        return data_translation(x_real, y_real) or data_translation(
+            (x_real + size_x - 1),
+            (y_real + size_y - 1)) or \
+               data_translation((x_real + size_x - 1),
+                                y_real) or data_translation(x_real,
+                                                            (
+                                                                        y_real + size_y - 1))
 
 
 # def draw_polygon_alpha(surface, color, points):
@@ -95,7 +102,8 @@ def draw_flashlight(points, color):
 class Weapon:
     """Общий класс оружия"""
 
-    def __init__(self, speed, damage, frequency, clip_size, ammo, reload_time, who, queue=-1):
+    def __init__(self, speed, damage, frequency, clip_size, ammo, reload_time,
+                 who, queue=-1):
         self.speed = speed
         self.damage = damage
         self.frequency = frequency
@@ -114,6 +122,9 @@ class Weapon:
         self.reload_anim_multiplier = 1
         self.attack_anim_frames = 3
 
+    def is_reloading(self):
+        return self.reload_progress != self.reload_time
+
     def spawn_bullet(self, damage, turn):
         turn = self.who.direction + random.randint(-self.spread_now,
                                                    self.spread_now)
@@ -123,7 +134,6 @@ class Weapon:
                -sin(radians(turn)) * self.speed,
                -cos(radians(turn)) * self.speed, damage=damage)
         self.who.is_attacking = True
-
 
     def reload_update(self):
         self.reload_progress += 1
@@ -152,12 +162,14 @@ class Weapon:
                         self.spread_now += 2
                     # print(self.spread_now)
                     # стрельба
-                    turn = self.who.direction + random.randint(-self.spread_now, self.spread_now)
+                    turn = self.who.direction + random.randint(-self.spread_now,
+                                                               self.spread_now)
                     # Bullet(self.who.rect.centerx - sin(radians(turn)) * 55,
                     #        self.who.rect.centery - cos(radians(turn)) * 55,
                     #        -sin(radians(turn)) * self.speed,
                     #        -cos(radians(turn)) * self.speed, damage=self.damage)
-                    self.spawn_bullet(damage=self.damage, turn=self.who.direction)
+                    self.spawn_bullet(damage=self.damage,
+                                      turn=self.who.direction)
                     self.frequency_now = self.frequency
                     self.clip -= 1
                     # перезарядка если пуль не осталось
@@ -174,14 +186,19 @@ class Weapon:
     def draw_interface(self):
         """Отрисовка интерфейса оружия"""
         self.font = pygame.font.Font(None, 30)
-        self.ammo_str = self.font.render(str(self.clip) + ' / ' + str(self.ammo), True, (255, 255, 255))
+        self.ammo_str = self.font.render(
+            str(self.clip) + ' / ' + str(self.ammo), True, (255, 255, 255))
         screen.blit(self.ammo_str, (int(width * 0.79), int(height * 0.8)))
-        pygame.draw.rect(screen, width=1, rect=(int(width * 0.808), int(height * 0.85),
-                                                52, 12), color='grey')
-        pygame.draw.rect(screen, width=0, rect=(int(width * 0.808) + 1, int(height * 0.85) + 1,
-                                                int(50 * self.reload_progress / self.reload_time), 10),
+        pygame.draw.rect(screen, width=1,
+                         rect=(int(width * 0.808), int(height * 0.85),
+                               52, 12), color='grey')
+        pygame.draw.rect(screen, width=0,
+                         rect=(int(width * 0.808) + 1, int(height * 0.85) + 1,
+                               int(50 * self.reload_progress / self.reload_time),
+                               10),
                          color=(255, 255, 255))
-        screen.blit(self.interface_image, (int(width * 0.67), int(height * 0.785)))
+        screen.blit(self.interface_image,
+                    (int(width * 0.67), int(height * 0.785)))
 
 
 class SniperRifle(Weapon):
@@ -194,7 +211,8 @@ class SniperRifle(Weapon):
 class Ak_47(Weapon):
     def __init__(self, whose):
         super().__init__(speed=60, damage=10, frequency=5,
-                         clip_size=30, ammo=100, who=whose, reload_time=100, queue=15)
+                         clip_size=30, ammo=100, who=whose, reload_time=100,
+                         queue=15)
         self.interface_image = ak_47_image
         self.reload_anim_frames = 20
         self.reload_anim_multiplier = 5
@@ -202,7 +220,8 @@ class Ak_47(Weapon):
 
 class Glock(Weapon):
     def __init__(self, whose):
-        super().__init__(speed=50, damage=10, frequency=15, clip_size=17, ammo=85, reload_time=45, who=whose)
+        super().__init__(speed=50, damage=10, frequency=15, clip_size=17,
+                         ammo=85, reload_time=45, who=whose)
         self.interface_image = glock_image
         self.reload_anim_frames = 15
         self.reload_anim_multiplier = 3
@@ -210,7 +229,8 @@ class Glock(Weapon):
 
 class Shotgun(Weapon):
     def __init__(self, whose):
-        super().__init__(speed=40, damage=7, frequency=50, clip_size=8, ammo=40, who=whose, reload_time=320)
+        super().__init__(speed=40, damage=7, frequency=50, clip_size=8, ammo=40,
+                         who=whose, reload_time=320)
         self.interface_image = shotgun_image
         self.reload_anim_frames = 20
         self.reload_anim_multiplier = 2
@@ -228,13 +248,15 @@ class Shotgun(Weapon):
 
     def reload_update(self):
         self.reload_progress += 1
-        if self.reload_progress % (self.reload_time // self.clip_size) == 0 and self.reload_progress != self.reload_time:
+        if self.reload_progress % (
+                self.reload_time // self.clip_size) == 0 and self.reload_progress != self.reload_time:
             if self.ammo != 0:
                 self.clip += 1
                 self.ammo -= 1
                 if self.ammo == 0:
                     self.reload_progress = self.reload_time
-        if self.reload_progress == self.reload_time:
+        if self.reload_progress == self.reload_time or self.clip == self.clip_size:
+            self.reload_progress = self.reload_time
             prev_ammo = self.clip
             self.clip = min(self.clip_size, self.ammo + self.clip)
             self.ammo -= self.clip - prev_ammo
@@ -242,7 +264,8 @@ class Shotgun(Weapon):
     def check_reload_start(self):
         if pygame.key.get_pressed()[
             pygame.K_r] and self.reload_progress == self.reload_time and self.clip != self.clip_size:
-            self.reload_progress = self.clip * (self.reload_time // self.clip_size)
+            self.reload_progress = self.clip * (
+                        self.reload_time // self.clip_size)
             self.who.is_reloading = True
 
 
@@ -263,17 +286,21 @@ class Knife:
             for enemy in enemies:
                 if (player.rect.centerx - enemy.rect.centerx) ** 2 + (
                         player.rect.centery - enemy.rect.centery) ** 2 < min_dist:
-                    min_dist = (player.rect.centerx - enemy.rect.centerx) ** 2 + (
-                            player.rect.centery - enemy.rect.centery) ** 2
+                    min_dist = (
+                                           player.rect.centerx - enemy.rect.centerx) ** 2 + (
+                                       player.rect.centery - enemy.rect.centery) ** 2
                     nearest_enemy = enemy
-            if nearest_enemy is not None and (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 \
-                    + (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 <= self.range_squared:
+            if nearest_enemy is not None and (
+                    player.rect.centerx - nearest_enemy.rect.centerx) ** 2 \
+                    + (
+                    player.rect.centerx - nearest_enemy.rect.centerx) ** 2 <= self.range_squared:
                 nearest_enemy.take_damage(self.damage)
             self.who.is_attacking = True
 
     def draw_interface(self):
         """Отрисовка интерфейса оружия"""
-        screen.blit(self.interface_image, (int(width * 0.67), int(height * 0.785)))
+        screen.blit(self.interface_image,
+                    (int(width * 0.67), int(height * 0.785)))
 
 
 class LootBox(pygame.sprite.Sprite):
@@ -307,10 +334,12 @@ class LootBox(pygame.sprite.Sprite):
     def draw_open_progress(self):
         if self.timer != 0:
             pygame.draw.rect(screen, width=1, rect=(
-                self.rect.centerx - 25, self.rect.centery - 75, 52, 12), color='red')
+                self.rect.centerx - 25, self.rect.centery - 75, 52, 12),
+                             color='red')
             pygame.draw.rect(screen, width=0,
-                             rect=(self.rect.centerx - 26, self.rect.centery - 74,
-                                   int(50 * self.timer / self.open_time), 10),
+                             rect=(
+                             self.rect.centerx - 26, self.rect.centery - 74,
+                             int(50 * self.timer / self.open_time), 10),
                              color='yellow')
 
 
@@ -341,8 +370,10 @@ class Bullet(pygame.sprite.Sprite):
         self.damage = damage  # урон
 
     def update(self):
-        self.float_x = self.rect.centerx + self.speedx / 50 + self.float_x - int(self.float_x)
-        self.float_y = self.rect.centery + self.speedy / 50 + self.float_y - int(self.float_y)
+        self.float_x = self.rect.centerx + self.speedx / 50 + self.float_x - int(
+            self.float_x)
+        self.float_y = self.rect.centery + self.speedy / 50 + self.float_y - int(
+            self.float_y)
         self.rect.centerx = int(self.float_x)
         self.rect.centery = int(self.float_y)
         for _ in range(49):
@@ -351,9 +382,11 @@ class Bullet(pygame.sprite.Sprite):
             self.rect.centerx = int(self.float_x)
             self.rect.centery = int(self.float_y)
             # pygame.sprite.spritecollide(self, walls, False)
-            if defining_intersection(translation_coordinates(self.rect.centerx - 5, self.rect.centery - 5), 10,
-                                     10) or pygame.sprite.spritecollide(self, characters,
-                                                                        False):
+            if defining_intersection(
+                    translation_coordinates(self.rect.centerx - 5,
+                                            self.rect.centery - 5), 10,
+                    10) or pygame.sprite.spritecollide(self, characters,
+                                                       False):
                 self.kill()
 
 
@@ -410,16 +443,18 @@ class Entity(pygame.sprite.Sprite):
 
     def anim_reload_update(self):
         weapon = self.get_current_weapon()
-        if type(weapon) == Knife or weapon.clip == weapon.clip_size:
+        if type(weapon) == Knife or not weapon.is_reloading():
             self.is_reloading = False
             self.anim_reload_cnt = 0
-        if not self.is_reloading:
-            self.anim_reload_cnt = 0
+        # if not weapon.is_reloading():
+        #     self.is_reloading = False
+        #     self.anim_reload_cnt = 0
         else:
+            self.is_reloading = True
             self.anim_reload_cnt += 1
             if self.anim_reload_cnt == weapon.reload_anim_multiplier * weapon.reload_anim_frames:
                 self.anim_reload_cnt = 0
-                if type(weapon) != Shotgun or weapon.clip == weapon.clip_size:
+                if type(weapon) != Shotgun or not weapon.is_reloading():
                     self.is_reloading = False
 
     def anim_attack_update(self):
@@ -461,7 +496,7 @@ class Entity(pygame.sprite.Sprite):
 
     def get_current_state(self):
         """Возвращает текущее состояние сущности:
-        атака - 0, перезарядка - 1, движение - 2, безделье - 3
+        перезарядка - 0, атака - 1, движение - 2, безделье - 3
         (состояние с меньшим номером имеет больший приоритет)"""
 
         if self.is_reloading:
@@ -500,7 +535,6 @@ class Entity(pygame.sprite.Sprite):
         states = ['reload', 'shoot', 'move', 'idle']
         return weapontype, states[state], frame_num
 
-
     def take_damage(self, damage):
         self.health -= damage
         if self.health <= 0:
@@ -513,15 +547,21 @@ class Entity(pygame.sprite.Sprite):
         self.real_posx = start_x + x
         self.real_posy = start_y + y
         x_move, y_move, xy_move = True, True, True
-        if defining_intersection((self.real_posx - 32 + constx, self.real_posy - 32 + consty), 64, 64):
+        if defining_intersection(
+                (self.real_posx - 32 + constx, self.real_posy - 32 + consty),
+                64, 64):
             xy_move = False
         self.real_posx = start_x + x
         self.real_posy = start_y
-        if defining_intersection((self.real_posx - 32 + constx, self.real_posy - 32 + consty), 64, 64):
+        if defining_intersection(
+                (self.real_posx - 32 + constx, self.real_posy - 32 + consty),
+                64, 64):
             x_move = False
         self.real_posx = start_x
         self.real_posy = start_y + y
-        if defining_intersection((self.real_posx - 32 + constx, self.real_posy - 32 + consty), 64, 64):
+        if defining_intersection(
+                (self.real_posx - 32 + constx, self.real_posy - 32 + consty),
+                64, 64):
             y_move = False
         if xy_move:
             self.movement = True
@@ -549,9 +589,11 @@ class Entity(pygame.sprite.Sprite):
             self.wall_hitbox.center = self.rect.center
 
     def draw_health_bar(self, health_color, health):
-        pygame.draw.rect(screen, width=1, rect=(self.rect.centerx - 26, self.rect.centery - 50, 52, 12), color='black')
+        pygame.draw.rect(screen, width=1, rect=(
+        self.rect.centerx - 26, self.rect.centery - 50, 52, 12), color='black')
         pygame.draw.rect(screen, width=0,
-                         rect=(self.rect.centerx - 25, self.rect.centery - 49, int(50 * health / self.max_health), 10),
+                         rect=(self.rect.centerx - 25, self.rect.centery - 49,
+                               int(50 * health / self.max_health), 10),
                          color=health_color)
 
     def determining_angle(self, x_pos, y_pos, x, y):
@@ -569,7 +611,8 @@ class Entity(pygame.sprite.Sprite):
             return 0
         return turn
 
-    def beam(self, x_start, y_start, x_end=False, y_end=False, turn=0, long=500, nesting=1, accuracy=0):
+    def beam(self, x_start, y_start, x_end=False, y_end=False, turn=0, long=500,
+             nesting=1, accuracy=0):
         """рисует луч с учетом пересечений со стенами"""
         # вернет кортеж, где первый аргумент - смог ли луч добрать до конечной точки,
         # а второй - точку где он впервые пересек стену или дверь
@@ -594,7 +637,8 @@ class Entity(pygame.sprite.Sprite):
             x, y = int(x_start + x_speed * i), int(y_start + y_speed * i)
             if defining_intersection(translation_coordinates(x, y), 1, 1):
                 if nesting == 1:
-                    return (False, self.beam(x - x_speed, y - y_speed, x_end=x, y_end=y, nesting=2)[1])
+                    return (False, self.beam(x - x_speed, y - y_speed, x_end=x,
+                                             y_end=y, nesting=2)[1])
                 else:
                     return (False, (x, y))
         return (True, (x, y))
@@ -621,12 +665,14 @@ class Player(Entity):
 
     def heal(self):
         """Использование игроком аптечки"""
-        self.health = min(self.max_health, self.health + int(self.max_health * 0.2))
+        self.health = min(self.max_health,
+                          self.health + int(self.max_health * 0.2))
 
     def draw_interface(self):
         """Отрисовка интерфейса игрока"""
         self.font = pygame.font.Font(None, 30)
-        self.ammo_str = self.font.render(str(self.medkits), True, (255, 255, 255))
+        self.ammo_str = self.font.render(str(self.medkits), True,
+                                         (255, 255, 255))
         screen.blit(self.ammo_str, (int(width * 0.88), int(height * 0.80)))
         self.get_current_weapon().draw_interface()
 
@@ -660,34 +706,40 @@ class Player(Entity):
         """происходит трассировка лучей для фонарика"""
 
         self.viewing_angle = 60  # угол обзора
-        coord = [(width // 2, height // 2)]  # массив координат многоугольника, для создания фонаря (видимости)
+        coord = [(width // 2,
+                  height // 2)]  # массив координат многоугольника, для создания фонаря (видимости)
         turn = 1  # частота пускания лучей (угол между соседними лучами)
 
         # выполняется трассировка
         for i in range(int(self.viewing_angle / turn) + 1):
             coord.append(
                 self.beam(width // 2, height // 2,
-                          turn=self.direction - self.viewing_angle / 2 + i * turn, long=500)[1])
+                          turn=self.direction - self.viewing_angle / 2 + i * turn,
+                          long=500)[1])
         coord.append((width // 2, height // 2))
 
         draw_flashlight(coord, (255, 255, 173, 50))
 
     def visible_objects(self):
         for enemy in enemies:
-            dist = (enemy.real_posx - self.real_posx) ** 2 + (enemy.real_posy - self.real_posy) ** 2
+            dist = (enemy.real_posx - self.real_posx) ** 2 + (
+                        enemy.real_posy - self.real_posy) ** 2
             if dist <= 10000:
                 enemy.distance_beam = [True, True]
                 if not enemy in characters_rendering:
                     characters_rendering.add(enemy)
             elif dist <= 530 ** 2:
-                if self.beam(self.rect.centerx, self.rect.centery, x_end=enemy.rect.centerx, y_end=enemy.rect.centery,
+                if self.beam(self.rect.centerx, self.rect.centery,
+                             x_end=enemy.rect.centerx, y_end=enemy.rect.centery,
                              accuracy=30, nesting=2)[0]:
-                    if abs(self.direction - self.determining_angle(self.rect.centerx, self.rect.centery,
-                                                                   enemy.rect.centerx,
-                                                                   enemy.rect.centery)) <= 34 or abs(
-                        self.direction - self.determining_angle(self.rect.centerx, self.rect.centery,
-                                                                enemy.rect.centerx,
-                                                                enemy.rect.centery)) >= 326:
+                    if abs(self.direction - self.determining_angle(
+                            self.rect.centerx, self.rect.centery,
+                            enemy.rect.centerx,
+                            enemy.rect.centery)) <= 34 or abs(
+                        self.direction - self.determining_angle(
+                            self.rect.centerx, self.rect.centery,
+                            enemy.rect.centerx,
+                            enemy.rect.centery)) >= 326:
                         enemy.distance_beam = [False, True]
                         if not enemy in characters_rendering:
                             characters_rendering.add(enemy)
@@ -719,7 +771,9 @@ class Player(Entity):
             xshift += 5
 
             # поворот персонажа к курсору
-        self.direction = self.determining_angle(self.rect.centerx, self.rect.centery, pygame.mouse.get_pos()[0],
+        self.direction = self.determining_angle(self.rect.centerx,
+                                                self.rect.centery,
+                                                pygame.mouse.get_pos()[0],
                                                 pygame.mouse.get_pos()[1])
         # self.tracing()
 
@@ -731,22 +785,25 @@ class Player(Entity):
         # self.rect = self.image.get_rect(center=self.rect.center)
         self.visible_objects()
 
-
         # проверка на смену оружия
         if keystate[pygame.K_1]:
             if self.current_weapon != 0 and (
                     type(
-                        self.get_current_weapon()) == Knife or self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
+                        self.get_current_weapon()) == Knife or
+                    self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
                 self.get_current_weapon().reload_progress = 0
-            self.current_weapon = 0
-            self.reset_reload_attack()
+            if self.current_weapon != 0:
+                self.current_weapon = 0
+                self.reset_reload_attack()
         elif keystate[pygame.K_2]:
             if self.current_weapon != 1 and (
                     type(
-                        self.get_current_weapon()) == Knife or self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
+                        self.get_current_weapon()) == Knife or
+                    self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time):
                 self.get_current_weapon().reload_progress = 0
-            self.current_weapon = 1
-            self.reset_reload_attack()
+            if self.current_weapon != 1:
+                self.current_weapon = 1
+                self.reset_reload_attack()
         elif keystate[pygame.K_3]:
             if self.current_weapon != 2 and self.get_current_weapon().reload_progress != self.get_current_weapon().reload_time:
                 self.get_current_weapon().reload_progress = 0
@@ -761,10 +818,12 @@ class Player(Entity):
         if keystate[pygame.K_f]:
             nearest_door = self.get_nearest_door()
             nearest_lootbox = self.get_nearest_lootbox()
-            door_dist_sq = (player.rect.centerx - nearest_door.rect.centerx) ** 2 + (
-                    player.rect.centery - nearest_door.rect.centery) ** 2 if nearest_door is not None else 1000000000
-            lootbox_dist_sq = (player.rect.centerx - nearest_lootbox.rect.centerx) ** 2 + (
-                    player.rect.centery - nearest_lootbox.rect.centery) ** 2 if nearest_lootbox is not None else 1000000000
+            door_dist_sq = (
+                                       player.rect.centerx - nearest_door.rect.centerx) ** 2 + (
+                                   player.rect.centery - nearest_door.rect.centery) ** 2 if nearest_door is not None else 1000000000
+            lootbox_dist_sq = (
+                                          player.rect.centerx - nearest_lootbox.rect.centerx) ** 2 + (
+                                      player.rect.centery - nearest_lootbox.rect.centery) ** 2 if nearest_lootbox is not None else 1000000000
             min_dist = min(door_dist_sq, lootbox_dist_sq)
             if min_dist <= self.range:
                 if min_dist == door_dist_sq:
@@ -810,7 +869,6 @@ class Enemy(Entity):
         self.distance_beam = [False,
                               False]  # первая означает персонаж находится "вплотную", вторая-луч не пересекат стен и расстояние "небольшое"
 
-
     # def is_visible(self):
     #     if (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 > 250000:
     #         return False
@@ -823,9 +881,13 @@ class Enemy(Entity):
             self.reset_target = 0
             self.detection = True
         elif self.distance_beam[1]:
-            if abs(self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
+            if abs(self.direction - self.determining_angle(self.rect.centerx,
+                                                           self.rect.centery,
+                                                           player.rect.centerx,
                                                            player.rect.centery)) <= 30 or abs(
-                self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
+                self.direction - self.determining_angle(self.rect.centerx,
+                                                        self.rect.centery,
+                                                        player.rect.centerx,
                                                         player.rect.centery)) >= 330:
                 self.reset_target = 0
                 self.detection = True
@@ -837,35 +899,54 @@ class Enemy(Entity):
     def update(self):
         self.detection_player()
         if self.detection:
-            self.direction = self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
+            self.direction = self.determining_angle(self.rect.centerx,
+                                                    self.rect.centery,
+                                                    player.rect.centerx,
                                                     player.rect.centery)
             # self.move_entity(xshift, yshift)
             self.image = pygame.transform.rotate(im1, self.direction)
             self.rect = self.image.get_rect(center=self.rect.center)
         else:
             if len(self.trajectory) != 1 and self.stop == 0:
-                if (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
-                        int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2 >= self.speed ** 2:
-                    self.direction = self.determining_angle(int(self.real_posx), int(self.real_posy),
-                                                            self.trajectory[self.trajectory_pos + 1][1],
-                                                            self.trajectory[self.trajectory_pos + 1][2])
+                if (int(self.real_posx) -
+                    self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
+                        int(self.real_posy) -
+                        self.trajectory[self.trajectory_pos + 1][
+                            2]) ** 2 >= self.speed ** 2:
+                    self.direction = self.determining_angle(int(self.real_posx),
+                                                            int(self.real_posy),
+                                                            self.trajectory[
+                                                                self.trajectory_pos + 1][
+                                                                1],
+                                                            self.trajectory[
+                                                                self.trajectory_pos + 1][
+                                                                2])
                     self.image = pygame.transform.rotate(im1, self.direction)
-                    self.move_entity(int(-sin(radians(self.direction)) * self.speed),
-                                     int(-cos(radians(self.direction)) * self.speed))
+                    self.move_entity(
+                        int(-sin(radians(self.direction)) * self.speed),
+                        int(-cos(radians(self.direction)) * self.speed))
                     # self.real_posx -= sin(radians(self.direction)) * self.speed
                     # self.real_posy -= cos(radians(self.direction)) * self.speed
                 else:
                     self.move_entity(int(-sin(radians(self.direction)) * (
-                            (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
-                            int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2) ** 0.5),
-                                     int(-cos(radians(self.direction)) * ((int(self.real_posx) -
-                                                                           self.trajectory[self.trajectory_pos + 1][
-                                                                               1]) ** 2 + (
-                                                                                  int(self.real_posy) -
-                                                                                  self.trajectory[
-                                                                                      self.trajectory_pos + 1][
-                                                                                      2]) ** 2) ** 0.5))
-                    self.real_posx, self.real_posy = self.trajectory[self.trajectory_pos + 1][1:3]
+                            (int(self.real_posx) -
+                             self.trajectory[self.trajectory_pos + 1][
+                                 1]) ** 2 + (
+                                    int(self.real_posy) -
+                                    self.trajectory[self.trajectory_pos + 1][
+                                        2]) ** 2) ** 0.5),
+                                     int(-cos(radians(self.direction)) * (
+                                                 (int(self.real_posx) -
+                                                  self.trajectory[
+                                                      self.trajectory_pos + 1][
+                                                      1]) ** 2 + (
+                                                         int(self.real_posy) -
+                                                         self.trajectory[
+                                                             self.trajectory_pos + 1][
+                                                             2]) ** 2) ** 0.5))
+                    self.real_posx, self.real_posy = self.trajectory[
+                                                         self.trajectory_pos + 1][
+                                                     1:3]
                     self.trajectory_pos += 1
                     self.trajectory_pos %= len(self.trajectory) - 1
                     if self.trajectory[self.trajectory_pos + 1][0] == 'stop':
@@ -980,24 +1061,25 @@ class PlayerAnimation:
                 'move': [],
                 'reload': [],
                 'shoot': []},
-            'knife': {
-                'idle': [],
-                'shoot': [],
-                'move': []},
-            'rifle': {
-                'idle': [],
-                'move': [],
-                'reload': [],
-                'shoot': []},
-            'shotgun': {
-                'idle': [],
-                'move': [],
-                'reload': [],
-                'shoot': []}}
+                'knife': {
+                    'idle': [],
+                    'shoot': [],
+                    'move': []},
+                'rifle': {
+                    'idle': [],
+                    'move': [],
+                    'reload': [],
+                    'shoot': []},
+                'shotgun': {
+                    'idle': [],
+                    'move': [],
+                    'reload': [],
+                    'shoot': []}}
         for cdir, dirs, files in os.walk('assets/player_sprites'):
             for file in files:
                 a1, a2 = cdir.split('\\')[1:]
-                self.animations[a1][a2].append(pygame.image.load(f'{cdir}\\{file}'))
+                self.animations[a1][a2].append(
+                    pygame.image.load(f'{cdir}\\{file}'))
         # print(self.animations)
 
     def get_current_image(self, weapon, state, frame_num):
@@ -1050,12 +1132,14 @@ if __name__ == '__main__':
     MedkitLootbox(500, 700)
     Door(400, 200, 0)
     camera = Camera()
-    enemy1 = Enemy([['go', 4500, 4200], ['go', 4400, 4150], ['go', 250, 100], ['go', 500, 100],
+    enemy1 = Enemy([['go', 4500, 4200], ['go', 4400, 4150], ['go', 250, 100],
+                    ['go', 500, 100],
                     ['stop', 100], ['go', 100, 100]])
 
     player = Player(4500, 4250)  # 550, 550
 
-    wall_layout = pic_to_map('assets/map50.png')  # массив из пикселей картинки, где находится стена
+    wall_layout = pic_to_map(
+        'assets/map50.png')  # массив из пикселей картинки, где находится стена
     # for wall in walls:
     #     print(wall.rect.center)
     # tr = pygame.Surface((1400, 750))
@@ -1071,7 +1155,8 @@ if __name__ == '__main__':
         # отрисовка и изменение свойств объектов
         # characters.update()
         player.get_current_weapon().update()
-        player.rect = player.image.get_rect(size=(64, 64), center=player.rect.center)
+        player.rect = player.image.get_rect(size=(64, 64),
+                                            center=player.rect.center)
         player.update()
         for i in characters:
             if i != player:
@@ -1103,23 +1188,30 @@ if __name__ == '__main__':
         # player.draw_health_bar('green', player.health)
         for lootbox in lootboxes:
             lootbox.draw_open_progress()
-        enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery, player.rect.centerx,
+        enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery,
+                    player.rect.centerx,
                     player.rect.centery)
         # player.tracing()
         # pygame.draw.rect(screen, 'red', player.rect, width=1)
         # pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
-        screen.blit(pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True, 'red'), (100, 100))
+        screen.blit(
+            pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True,
+                                              'red'), (100, 100))
 
         # anim debug
-        screen.blit(pygame.font.Font(None, 40).render(str(player.get_current_state()), True,
+        screen.blit(
+            pygame.font.Font(None, 40).render(str(player.get_current_state()),
+                                              True,
                                               'red'), (100, 200))
         screen.blit(pygame.font.Font(None, 40).render(
-            f'i{player.anim_idle_cnt}/r{player.anim_reload_cnt}/a{player.anim_attack_cnt}/m{player.anim_move_cnt}', True,
-                                              'red'), (100, 300))
+            f'i{player.anim_idle_cnt}/r{player.anim_reload_cnt}/a{player.anim_attack_cnt}/m{player.anim_move_cnt}',
+            True,
+            'red'), (100, 300))
         screen.blit(
             pygame.font.Font(None, 40).render(
-                f'i{int(player.is_idle)}/r{int(player.is_reloading)}/a{int(player.is_attacking)}/m{int(player.is_moving)}', True,
-                                              'red'), (100, 400))
+                f'i{int(player.is_idle)}/r{int(player.is_reloading)}/a{int(player.is_attacking)}/m{int(player.is_moving)}',
+                True,
+                'red'), (100, 400))
 
         player.draw_interface()
         clock.tick(FPS)
