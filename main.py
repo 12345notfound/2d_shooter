@@ -111,6 +111,7 @@ class Weapon:
         self.reload_time = reload_time  # время перезарядки (в мс)
         self.reload_progress = self.reload_time
         self.reload_anim_frames = 0
+        self.reload_anim_multiplier = 1
         self.attack_anim_frames = 3
 
     def spawn_bullet(self, damage, turn):
@@ -135,6 +136,7 @@ class Weapon:
         if pygame.key.get_pressed()[
             pygame.K_r] and self.reload_progress == self.reload_time and self.clip != self.clip_size:
             self.reload_progress = 0
+            self.who.is_reloading = True
 
     def update(self):
         if self.reload_progress < self.reload_time:
@@ -161,6 +163,7 @@ class Weapon:
                     # перезарядка если пуль не осталось
                     if self.clip == 0 and self.ammo > 0:
                         self.reload_progress = 0
+                        self.who.is_reloading = True
                 self.frequency_now -= 1
                 if self.frequency_now <= -2:
                     self.frequency_now = 0
@@ -191,16 +194,18 @@ class SniperRifle(Weapon):
 class Ak_47(Weapon):
     def __init__(self, whose):
         super().__init__(speed=60, damage=10, frequency=5,
-                         clip_size=1000, ammo=100, who=whose, reload_time=3 * FPS, queue=15)
+                         clip_size=30, ammo=100, who=whose, reload_time=100, queue=15)
         self.interface_image = ak_47_image
         self.reload_anim_frames = 20
+        self.reload_anim_multiplier = 5
 
 
 class Glock(Weapon):
     def __init__(self, whose):
-        super().__init__(speed=50, damage=10, frequency=15, clip_size=17, ammo=85, reload_time=30, who=whose)
+        super().__init__(speed=50, damage=10, frequency=15, clip_size=17, ammo=85, reload_time=45, who=whose)
         self.interface_image = glock_image
         self.reload_anim_frames = 15
+        self.reload_anim_multiplier = 3
 
 
 class Shotgun(Weapon):
@@ -208,6 +213,7 @@ class Shotgun(Weapon):
         super().__init__(speed=40, damage=7, frequency=50, clip_size=8, ammo=40, who=whose, reload_time=320)
         self.interface_image = shotgun_image
         self.reload_anim_frames = 20
+        self.reload_anim_multiplier = 2
 
     def spawn_bullet(self, turn, damage):
         for _ in range(9):
@@ -237,6 +243,7 @@ class Shotgun(Weapon):
         if pygame.key.get_pressed()[
             pygame.K_r] and self.reload_progress == self.reload_time and self.clip != self.clip_size:
             self.reload_progress = self.clip * (self.reload_time // self.clip_size)
+            self.who.is_reloading = True
 
 
 class Knife:
@@ -403,16 +410,17 @@ class Entity(pygame.sprite.Sprite):
 
     def anim_reload_update(self):
         weapon = self.get_current_weapon()
-        if type(weapon) == Knife:
+        if type(weapon) == Knife or weapon.clip == weapon.clip_size:
             self.is_reloading = False
             self.anim_reload_cnt = 0
         if not self.is_reloading:
             self.anim_reload_cnt = 0
         else:
             self.anim_reload_cnt += 1
-            if self.anim_reload_cnt == 3 * weapon.reload_anim_frames:
+            if self.anim_reload_cnt == weapon.reload_anim_multiplier * weapon.reload_anim_frames:
                 self.anim_reload_cnt = 0
-                self.is_reloading = False
+                if type(weapon) != Shotgun or weapon.clip == weapon.clip_size:
+                    self.is_reloading = False
 
     def anim_attack_update(self):
         weapon = self.get_current_weapon()
@@ -455,11 +463,12 @@ class Entity(pygame.sprite.Sprite):
         """Возвращает текущее состояние сущности:
         атака - 0, перезарядка - 1, движение - 2, безделье - 3
         (состояние с меньшим номером имеет больший приоритет)"""
-        if self.is_attacking:
-            self.is_reloading = False
-            return 0
-        elif self.is_reloading:
+
+        if self.is_reloading:
             self.is_attacking = False
+            return 0
+        elif self.is_attacking:
+            self.is_reloading = False
             return 1
         elif self.is_moving:
             self.is_idle = False
@@ -480,17 +489,17 @@ class Entity(pygame.sprite.Sprite):
             weapontype = 'shotgun'
         elif type(weapon) == Glock:
             weapontype = 'handgun'
-        if state == 0:
-            frame_num = self.anim_attack_cnt
-        elif state == 1:
-            frame_num = self.anim_reload_cnt
+        if state == 1:
+            frame_num = self.anim_attack_cnt // 3
+        elif state == 0:
+            frame_num = self.anim_reload_cnt // weapon.reload_anim_multiplier
         elif state == 2:
-            frame_num = self.anim_move_cnt
+            frame_num = self.anim_move_cnt // 3
         elif state == 3:
-            frame_num = self.anim_idle_cnt
-        states = ['shoot', 'reload', 'move', 'idle']
+            frame_num = self.anim_idle_cnt // 3
+        states = ['reload', 'shoot', 'move', 'idle']
+        return weapontype, states[state], frame_num
 
-        return weapontype, states[state], frame_num // 3
 
     def take_damage(self, damage):
         self.health -= damage
@@ -597,7 +606,7 @@ class Player(Entity):
     def __init__(self, x, y):
         super().__init__(x, y)
         characters_rendering.add(self)
-        self.weapon_list = [Shotgun(self), Glock(self), Knife(self)]
+        self.weapon_list = [Shotgun(self), Ak_47(self), Knife(self)]
         self.current_weapon = 1
         self.medkits = 0
         self.range = 15000
