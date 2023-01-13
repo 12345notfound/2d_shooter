@@ -25,6 +25,8 @@ def pic_to_map(filename):
             elif pixels[i, j] == (68, 177, 77):
                 Door(i * 100, j * 100, 1)
                 result[i][j] = [True, 1]
+            # else:
+            #     Tile(i * 100, j * 100)
 
     # возвращает массив с расположнием стен и дверей
     return result
@@ -1086,6 +1088,31 @@ class PlayerAnimation:
         return self.animations[weapon][state][frame_num]
 
 
+# class Tile(pygame.sprite.Sprite):
+#     def __init__(self, x, y):
+#         super().__init__(all_sprites, tiles)
+#         self.image = tile1
+#         self.rect = self.image.get_rect()
+#         self.rect.center = x, y
+
+
+class Furniture(pygame.sprite.Sprite):
+    def __init__(self, x, y, type):
+        super().__init__(all_sprites, furniture, walls)
+        self.image = table8
+        self.rect = self.image.get_rect()
+        self.rect.topleft = x, y
+
+
+class MapTexture(pygame.sprite.Sprite):
+    """Текстуры карты"""
+    def __init__(self):
+        super().__init__(all_sprites, map_texture)
+        self.image = map_image
+        self.rect = self.image.get_rect()
+        self.rect.topleft = -50, -50
+
+
 if __name__ == '__main__':
 
     FPS = 60
@@ -1108,6 +1135,10 @@ if __name__ == '__main__':
     wall_boundaries = pygame.sprite.Group()
     doors_wall = pygame.sprite.Group()
 
+    tiles = pygame.sprite.Group()
+    furniture = pygame.sprite.Group()
+    map_texture = pygame.sprite.Group()
+
     sniper_rifle_image = pygame.image.load('assets/sniper_rifle2.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
     ak_47_image = pygame.image.load('assets/ak_47_image2.png').convert()
@@ -1123,6 +1154,10 @@ if __name__ == '__main__':
 
     im1 = pygame.image.load('1.png').convert()
     im1.set_colorkey((0, 0, 0))
+    tile1 = pygame.image.load('assets/floor_textures/tile_square_dark.png').convert()
+    table8 = pygame.image.load('assets/furniture/table_8per_1.png').convert()
+    table8.set_colorkey((185, 122, 86))
+    map_image = pygame.image.load('assets/map_5000.png')
 
     player_anim = PlayerAnimation()
     running = True
@@ -1136,8 +1171,11 @@ if __name__ == '__main__':
                     ['go', 500, 100],
                     ['stop', 100], ['go', 100, 100]])
 
-    player = Player(4500, 4250)  # 550, 550
-
+    player = Player(3800, 1500)  # 550, 550  # 4500, 4250
+    # Tile(4500, 4200)
+    MapTexture()
+    Furniture(3750, 1150, 1)
+    Furniture(3500, 1150, 1)
     wall_layout = pic_to_map(
         'assets/map50.png')  # массив из пикселей картинки, где находится стена
     # for wall in walls:
@@ -1165,6 +1203,10 @@ if __name__ == '__main__':
         for sprite in all_sprites:
             camera.apply(sprite)
         screen.fill('black')
+        map_texture.draw(screen)
+        # tiles.draw(screen)  # exp
+
+        furniture.draw(screen)
         player.tracing()
         other_sprites.draw(screen)
         walls.draw(screen)
@@ -1172,6 +1214,7 @@ if __name__ == '__main__':
         # for i in walls:
         #     i.update()
         # walls_rendering.draw(screen)
+
         characters_rendering.draw(screen)
         other_sprites.draw(screen)
         doors.draw(screen)
@@ -1207,12 +1250,10 @@ if __name__ == '__main__':
             f'i{player.anim_idle_cnt}/r{player.anim_reload_cnt}/a{player.anim_attack_cnt}/m{player.anim_move_cnt}',
             True,
             'red'), (100, 300))
-        screen.blit(
-            pygame.font.Font(None, 40).render(
-                f'i{int(player.is_idle)}/r{int(player.is_reloading)}/a{int(player.is_attacking)}/m{int(player.is_moving)}',
-                True,
-                'red'), (100, 400))
 
+        screen.blit(
+            pygame.font.Font(None, 40).render(f'{player.real_posx}, {player.real_posy}', True,
+                                              'red'), (100, 500))
         player.draw_interface()
         clock.tick(FPS)
         # screen.blit(tmp_image, (player.rect.x, player.rect.y))
