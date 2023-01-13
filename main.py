@@ -1136,7 +1136,7 @@ class MapTexture(pygame.sprite.Sprite):
         super().__init__(all_sprites, map_texture)
         self.image = map_image
         self.rect = self.image.get_rect()
-        self.rect.topleft = -50, -50
+        self.rect.topleft = -25, -25
 
 
 if __name__ == '__main__':
@@ -1183,7 +1183,7 @@ if __name__ == '__main__':
     tile1 = pygame.image.load('assets/floor_textures/tile_square_dark.png').convert()
     table8 = pygame.image.load('assets/furniture/table_8per_1.png').convert()
     table8.set_colorkey((185, 122, 86))
-    map_image = pygame.image.load('assets/map_5000.png')
+    map_image = pygame.image.load('assets/map_100_texture.png')
 
     player_anim = PlayerAnimation()
     running = True
