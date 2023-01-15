@@ -1200,8 +1200,8 @@ if __name__ == '__main__':
     player = Player(3800, 1500)  # 550, 550  # 4500, 4250
     # Tile(4500, 4200)
     MapTexture()
-    Furniture(3750, 1150, 1)
-    Furniture(3500, 1150, 1)
+    # Furniture(3750, 1150, 1)
+    # Furniture(3500, 1150, 1)
     wall_layout = pic_to_map(
         'assets/map100.png')  # массив из пикселей картинки, где находится стена
     # for wall in walls:
@@ -1235,7 +1235,7 @@ if __name__ == '__main__':
         furniture.draw(screen)
         player.tracing()
         other_sprites.draw(screen)
-        walls.draw(screen)
+        # walls.draw(screen)
         # wallllll.rendering = True
         # for i in walls:
         #     i.update()
