@@ -41,8 +41,7 @@ def separation():
         elif i <= 3:
             if lvl[i - 2] != 0:
                 button.append(Button_rect(screen, location_objects['1'][0] + (i - 1) // 2 * 233,
-                                          location_objects['1'][1] + 213 * ((i - 1) % 2), 200, 187, lambda:
-                                          print(i)))
+                                          location_objects['1'][1] + 213 * ((i - 1) % 2), 200, 187, lambda:open_now(1)))
                 screen.blit(lvl_text[i - 1], (0, 0, 100, 100))
                 for j in range(lvl[i - 1]):
                     screen.blit(star, (
@@ -59,7 +58,8 @@ def separation():
                 130,
                 130))
 
-
+def open_now(number):
+    pass
 if __name__ == '__main__':
     pygame.init()
     pygame.display.set_caption('2d_shooter')
@@ -87,8 +87,8 @@ if __name__ == '__main__':
     star.set_colorkey((255, 255, 255))
 
     button = []
-    button.append(Button_rect(screen,1035,24,331,50,lambda:print(1)))
-    button.append(Button_rect(screen, 898, 569, 457, 105, lambda: print(1)))
+    button.append(Button_rect(screen,1035,24,331,50,lambda: open_now(4)))
+    button.append(Button_rect(screen, 898, 569, 457, 105, lambda: open_now(5)))
 
     name = 'Женя'  # самое важное в работе
     money, lvl = reading(name)

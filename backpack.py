@@ -2,7 +2,22 @@ import pygame
 import sqlite3
 from interface import Button_rect
 
-location_objects = {'1': (345, 143), 'замок': (402, 173), 'надписаь': (358, 194), 'звезда': (374, 276)}
+
+def addendum():
+    """Добавление аккаунта"""
+
+    con = sqlite3.connect("Базы данных/Данные аккаунтов.db")
+    cur = con.cursor()
+    cur.execute(
+        f"""UPDATE Data
+        SET money = '{money}'
+        WHERE name = '{name}'""")
+    cur.execute(
+        f"""UPDATE Data
+           SET lvl_glock = '{lvl_glock}'
+           WHERE name = '{name}'""")
+    con.commit()
+    con.close()
 
 
 def reading(name):
@@ -30,6 +45,11 @@ def separation():
         if Selected_weapon == 1:
             pygame.draw.rect(screen, 'blue', (98, 107, 200, 200), 4)
             screen.blit(improvements, (0, 0, 1400, 700))
+            for i in range(lvl_glock // 10):
+                pygame.draw.rect(screen, [98, 215, 84], (926 + i * 40, 284, 24, 48))
+            for i in range(lvl_glock % 10):
+                pygame.draw.rect(screen, [98, 215, 84], (926 + i * 40, 437, 24, 48))
+
         elif Selected_weapon == 2:
             pygame.draw.rect(screen, 'blue', (98, 417, 200, 200), 4)
             screen.blit(not_improvements, (0, 0, 1400, 700))
@@ -40,10 +60,28 @@ def separation():
             pygame.draw.rect(screen, 'blue', (400, 417, 350, 200), 4)
             screen.blit(not_improvements, (0, 0, 1400, 700))
 
+
 def changing_weapons(number):
     global Selected_weapon
     Selected_weapon = number
     separation()
+
+
+def plus(number):
+    global money, lvl_glock
+    if number == 1:
+        if money >= 100 and lvl_glock // 10 <= 3:
+            money -= 100
+            lvl_glock += 10
+            separation()
+            addendum()
+    else:
+        if money >= 100 and lvl_glock % 10 <= 3:
+            money -= 100
+            lvl_glock += 1
+            separation()
+            addendum()
+
 
 if __name__ == '__main__':
     pygame.init()
@@ -65,12 +103,13 @@ if __name__ == '__main__':
     screen.blit(background, (0, 0))
     separation()
 
-
     button = []
     button.append(Button_rect(screen, 98, 107, 200, 200, lambda: changing_weapons(1)))
     button.append(Button_rect(screen, 98, 417, 200, 200, lambda: changing_weapons(2)))
     button.append(Button_rect(screen, 400, 107, 350, 200, lambda: changing_weapons(3)))
     button.append(Button_rect(screen, 400, 417, 350, 200, lambda: changing_weapons(4)))
+    button.append(Button_rect(screen, 843, 284, 49, 49, lambda: plus(1)))
+    button.append(Button_rect(screen, 843, 437, 49, 49, lambda: plus(2)))
 
     fps = 90
     clock = pygame.time.Clock()
