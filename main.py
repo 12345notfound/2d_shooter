@@ -28,11 +28,8 @@ def pic_to_map(filename):
                     Door(i * 50, j * 50 + 25, 0)
                     result[i][j + 1] = [True, 0]
                     result[i][j] = [True, 0]
-            # elif pixels[i, j] == (68, 177, 77):
-            #     Door(i * 50, j * 50, 1)
-            #     result[i][j] = [True, 1]
-            # else:
-            #     Tile(i * 100, j * 100)
+            elif pixels[i, j] == (195, 195, 195):
+                result[i][j] = 3
 
     # возвращает массив с расположнием стен и дверей
     return result
@@ -49,7 +46,7 @@ def translation_coordinates(x, y):
             y + player.real_posy - player.rect.centery + consty)
 
 
-def data_translation(pixelx, pixely):
+def data_translation(pixelx, pixely, who):
     """для правильного считывания информации из массива"""
 
     if type(wall_layout[pixelx // 50][pixely // 50]) == list:
@@ -63,21 +60,26 @@ def data_translation(pixelx, pixely):
                 return wall_layout[pixelx // 50][pixely // 50][0]
             else:
                 return False
+    elif wall_layout[pixelx // 50][pixely // 50] == 3:
+        if who == 'entity':
+            return True
+        else:
+            return False
     return wall_layout[pixelx // 50][pixely // 50]
 
 
-def defining_intersection(coord, size_x, size_y):
+def defining_intersection(coord, size_x, size_y, who):
     '''проверяет на принадлежность к стене или двери'''
 
     x_real, y_real = int(coord[0]), int(coord[1])
     if size_x == 1 and size_y == 1:
-        return data_translation(x_real, y_real)
+        return data_translation(x_real, y_real, who)
     else:
-        return data_translation(x_real, y_real) or data_translation((x_real + size_x - 1), (y_real + size_y - 1)) or \
-               data_translation((x_real + size_x - 1), y_real) or data_translation(x_real, (y_real + size_y - 1)) or \
-               data_translation((x_real + size_x // 2), y_real) or data_translation(x_real, (y_real + size_y // 2)) or \
-               data_translation((x_real + size_x // 2), (y_real + size_y - 1)) or \
-               data_translation((x_real + size_x - 1), (y_real + size_y // 2))
+        return data_translation(x_real, y_real, who) or data_translation((x_real + size_x - 1), (y_real + size_y - 1), who) or \
+               data_translation((x_real + size_x - 1), y_real, who) or data_translation(x_real, (y_real + size_y - 1), who) or \
+               data_translation((x_real + size_x // 2), y_real, who) or data_translation(x_real, (y_real + size_y // 2), who) or \
+               data_translation((x_real + size_x // 2), (y_real + size_y - 1), who) or \
+               data_translation((x_real + size_x - 1), (y_real + size_y // 2), who)
 
 
 # def draw_polygon_alpha(surface, color, points):
@@ -159,7 +161,7 @@ class Weapon:
             self.reload_update()
         else:
             if self.clip > 0:
-                if (pygame.mouse.get_pressed()[0] or type(self.who) == Enemy) and self.frequency_now <= 0:
+                if pygame.mouse.get_pressed()[0] and self.frequency_now <= 0:
                     self.spread_now = 1
                     self.queue_counter += 1
                     if self.queue_counter >= self.queue and self.queue >= 0:
@@ -218,16 +220,6 @@ class Ak_47(Weapon):
     def __init__(self, whose):
         super().__init__(speed=60, damage=10, frequency=5,
                          clip_size=30, ammo=100, who=whose, reload_time=100,
-                         queue=15)
-        self.interface_image = ak_47_image
-        self.reload_anim_frames = 20
-        self.reload_anim_multiplier = 5
-
-
-class Ak_47_enemy(Weapon):
-    def __init__(self, whose):
-        super().__init__(speed=60, damage=5, frequency=40,
-                         clip_size=300000000, ammo=100, who=whose, reload_time=100,
                          queue=15)
         self.interface_image = ak_47_image
         self.reload_anim_frames = 20
@@ -401,7 +393,7 @@ class Bullet(pygame.sprite.Sprite):
             if defining_intersection(
                     translation_coordinates(self.rect.centerx - 5,
                                             self.rect.centery - 5), 10,
-                    10) or pygame.sprite.spritecollide(self, characters,
+                    10, 'bullet') or pygame.sprite.spritecollide(self, characters,
                                                        False):
                 self.kill()
 
@@ -565,19 +557,19 @@ class Entity(pygame.sprite.Sprite):
         x_move, y_move, xy_move = True, True, True
         if defining_intersection(
                 (self.real_posx - 32 + constx, self.real_posy - 32 + consty),
-                64, 64):
+                64, 64, 'entity'):
             xy_move = False
         self.real_posx = start_x + x
         self.real_posy = start_y
         if defining_intersection(
                 (self.real_posx - 32 + constx, self.real_posy - 32 + consty),
-                64, 64):
+                64, 64, 'entity'):
             x_move = False
         self.real_posx = start_x
         self.real_posy = start_y + y
         if defining_intersection(
                 (self.real_posx - 32 + constx, self.real_posy - 32 + consty),
-                64, 64):
+                64, 64, 'entity'):
             y_move = False
         if xy_move:
             self.movement = True
@@ -651,7 +643,7 @@ class Entity(pygame.sprite.Sprite):
         # находит первое пересение луча со стеной или дверью
         for i in range(0, accuracy + 1):
             x, y = int(x_start + x_speed * i), int(y_start + y_speed * i)
-            if defining_intersection(translation_coordinates(x, y), 1, 1):
+            if defining_intersection(translation_coordinates(x, y), 1, 1, 'beam'):
                 if nesting == 1:
                     return (False, self.beam(x - x_speed, y - y_speed, x_end=x,
                                              y_end=y, nesting=2)[1])
@@ -760,6 +752,7 @@ class Player(Entity):
                         if not enemy in characters_rendering:
                             characters_rendering.add(enemy)
                     else:
+                        enemy.distance_beam = [False, False]
                         if enemy in characters_rendering:
                             characters_rendering.remove(enemy)
                 else:
@@ -770,8 +763,6 @@ class Player(Entity):
                 enemy.distance_beam = [False, False]
                 if enemy in characters_rendering:
                     characters_rendering.remove(enemy)
-            if not enemy in characters_rendering:
-                characters_rendering.add(enemy)
 
     def update(self):
         xshift = 0
@@ -885,12 +876,6 @@ class Enemy(Entity):
         self.reset_target = 0
         self.distance_beam = [False,
                               False]  # первая означает персонаж находится "вплотную", вторая-луч не пересекат стен и расстояние "небольшое"
-        self.const_turn_observation = 60
-        self.left_turn = self.const_turn_observation
-        self.right_turn = self.const_turn_observation * 2
-        self.angle_observation = False
-        self.desired_angle = False
-        self.weapon_enemy = Ak_47_enemy(self)
 
     # def is_visible(self):
     #     if (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 > 250000:
@@ -918,14 +903,13 @@ class Enemy(Entity):
             self.condition = 'Action'
 
     def See(self):
-        direction_player = self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
-                                                  player.rect.centery)
-        if abs(direction_player - self.direction) <= 8:
-            self.direction = direction_player
-            self.weapon_enemy.update()
+        self.direction_player = self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
+                                                       player.rect.centery)
+        if abs(self.direction_player - self.direction) <= 8:
+            self.direction = self.direction_player
             # функция стрельбы
         else:
-            if 0 <= (self.direction - direction_player) <= 180 or (self.direction - direction_player) <= -180:
+            if 0 <= (self.direction - self.direction_player) <= 180 or (self.direction - self.direction_player) <= -180:
                 self.direction -= 8
                 if self.direction < -180:
                     self.direction += 360
@@ -949,81 +933,7 @@ class Enemy(Entity):
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def run(self):
-        direction_way = self.determining_angle(int(self.real_posx), int(self.real_posy),
-                                               self.trajectory[self.trajectory_pos + 1][1],
-                                               self.trajectory[self.trajectory_pos + 1][2])
-
-        if abs(direction_way - self.direction) <= 4:
-            self.direction = direction_way
-            if (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
-                    int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2 > self.speed ** 2:
-                self.image = pygame.transform.rotate(im1, self.direction + 90)
-                self.move_entity(int(-sin(radians(self.direction)) * self.speed),
-                                 int(-cos(radians(self.direction)) * self.speed))
-            else:
-                self.move_entity(int(-sin(radians(self.direction)) * (
-                        (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
-                        int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2) ** 0.5),
-                                 int(-cos(radians(self.direction)) * ((int(self.real_posx) -
-                                                                       self.trajectory[self.trajectory_pos + 1][
-                                                                           1]) ** 2 + (
-                                                                              int(self.real_posy) -
-                                                                              self.trajectory[
-                                                                                  self.trajectory_pos + 1][
-                                                                                  2]) ** 2) ** 0.5))
-                self.real_posx, self.real_posy = self.trajectory[self.trajectory_pos + 1][1:3]
-                self.trajectory_pos += 1
-                self.trajectory_pos %= len(self.trajectory) - 1
-                if self.trajectory[self.trajectory_pos + 1][0] == 'stop':
-                    self.angle_observation = self.trajectory[self.trajectory_pos + 1][1]
-        else:
-            if 0 <= (self.direction - direction_way) <= 180 or (self.direction - direction_way) <= -180:
-                self.direction -= 4
-                if self.direction < -180:
-                    self.direction += 360
-            else:
-                self.direction += 4
-                if self.direction > 180:
-                    self.direction -= 360
-        self.image = pygame.transform.rotate(im1, self.direction + 90)
-        self.rect = self.image.get_rect(center=self.rect.center)
-
-    def observation(self):
-        if self.desired_angle:
-            if self.left_turn >= 0:
-                self.direction -= 1
-                self.left_turn -= 1
-                if self.direction < -180:
-                    self.direction += 360
-            elif self.right_turn >= 0:
-                self.direction += 1
-                self.right_turn -= 1
-                if self.direction > 180:
-                    self.direction -= 360
-            else:
-                self.angle_observation = False
-                self.desired_angle = False
-                self.left_turn = self.const_turn_observation
-                self.right_turn = self.const_turn_observation * 2
-                self.trajectory_pos += 1
-                self.trajectory_pos %= len(self.trajectory) - 1
-                if self.trajectory[self.trajectory_pos + 1][0] == 'stop':
-                    self.angle_observation = self.trajectory[self.trajectory_pos + 1][1]
-        elif abs(self.angle_observation - self.direction) <= 2:
-            self.direction = self.angle_observation
-            self.desired_angle = True
-        else:
-            if 0 <= (self.direction - self.angle_observation) <= 180 or (
-                    self.direction - self.angle_observation) <= -180:
-                self.direction -= 1
-                if self.direction < -180:
-                    self.direction += 360
-            else:
-                self.direction += 1
-                if self.direction > 180:
-                    self.direction -= 360
-        self.image = pygame.transform.rotate(im1, self.direction + 90)
-        self.rect = self.image.get_rect(center=self.rect.center)
+        pass
 
     def update(self):
         self.detection_player()
@@ -1032,14 +942,41 @@ class Enemy(Entity):
         elif self.condition == 'Lost':
             self.Lost()
         else:
-            if self.trajectory_pos == 0:
-                if self.trajectory[self.trajectory_pos + 1][0] == 'stop':
-                    self.angle_observation = self.trajectory[self.trajectory_pos + 1][1]
-            if len(self.trajectory) != 1:
-                if not self.angle_observation:
-                    self.run()
-                elif self.angle_observation:
-                    self.observation()
+            if len(self.trajectory) != 1 and self.stop == 0:
+                if (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
+                        int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2 >= self.speed ** 2:
+                    self.direction = self.determining_angle(int(self.real_posx), int(self.real_posy),
+                                                            self.trajectory[self.trajectory_pos + 1][1],
+                                                            self.trajectory[self.trajectory_pos + 1][2])
+                    self.image = pygame.transform.rotate(im1, self.direction + 90)
+                    self.move_entity(int(-sin(radians(self.direction)) * self.speed),
+                                     int(-cos(radians(self.direction)) * self.speed))
+                    # self.real_posx -= sin(radians(self.direction)) * self.speed
+                    # self.real_posy -= cos(radians(self.direction)) * self.speed
+                else:
+                    self.move_entity(int(-sin(radians(self.direction)) * (
+                            (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
+                            int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2) ** 0.5),
+                                     int(-cos(radians(self.direction)) * ((int(self.real_posx) -
+                                                                           self.trajectory[self.trajectory_pos + 1][
+                                                                               1]) ** 2 + (
+                                                                                  int(self.real_posy) -
+                                                                                  self.trajectory[
+                                                                                      self.trajectory_pos + 1][
+                                                                                      2]) ** 2) ** 0.5))
+                    self.real_posx, self.real_posy = self.trajectory[self.trajectory_pos + 1][1:3]
+                    self.trajectory_pos += 1
+                    self.trajectory_pos %= len(self.trajectory) - 1
+                    if self.trajectory[self.trajectory_pos + 1][0] == 'stop':
+                        self.stop = self.trajectory[self.trajectory_pos + 1][1]
+            elif self.stop != 0:
+                self.direction += 2
+                self.image = pygame.transform.rotate(im1, self.direction)
+                self.stop -= 1
+                if self.stop == 0:
+                    self.trajectory_pos += 1
+                    self.trajectory_pos %= len(self.trajectory) - 1
+            self.rect = self.image.get_rect(center=self.rect.center)
 
 
 class Wall(pygame.sprite.Sprite):
@@ -1074,9 +1011,9 @@ class Door(pygame.sprite.Sprite):
         super().__init__(all_sprites, doors, doors_wall, walls)
         self.direction = direction
         if direction == 0:
-            self.image = pygame.Surface((20, 100))
+            self.image = door_textures[(1, 'vert')]
         elif direction == 1:
-            self.image = pygame.Surface((100, 20))
+            self.image = door_textures[(1, 'hor')]
         self.rect = self.image.get_rect()
         self.rect.center = x, y
 
@@ -1084,10 +1021,10 @@ class Door(pygame.sprite.Sprite):
         # self.rect.center = (x, y)
         self.constx = x
         self.consty = y
-        self.image.fill((128, 0, 0))
+        # self.image.fill((128, 0, 0))
         self.is_open = False
         self.max_delay = FPS
-        self.delay = self.max_delay
+        self.delay = 0
 
     def use(self):
         if self.delay == 0:
@@ -1111,18 +1048,42 @@ class Door(pygame.sprite.Sprite):
                 self.is_open = True
                 walls.remove(self)
                 doors_wall.remove(self)
-            self.change_image()
             self.delay = self.max_delay
+            self.change_image()
+
 
     def change_image(self):
-        if self.is_open:
-            self.image.fill((0, 128, 0))
-        else:
-            self.image.fill((128, 0, 0))
+        # if self.is_open:
+        #     self.image.fill((0, 128, 0))
+        # else:
+        #     self.image.fill((128, 0, 0))
+        self.image = self.get_current_image()
 
     def update(self):
         if self.delay != 0:
             self.delay -= 1
+            self.change_image()
+
+    def get_current_image(self):
+        """Возвращает текущую текстуру двери"""
+        orientation = 'hor' if self.direction == 1 else 'vert'
+        if self.delay == 0:
+            if self.is_open:
+                frame = 6
+            else:
+                frame = 1
+        elif self.delay == self.max_delay:
+            if self.is_open:
+                frame = 1
+            else:
+                frame = 6
+        else:
+            if self.is_open:
+                frame = (self.max_delay - self.delay + 10) // (FPS // 6)
+            else:
+                frame = (self.delay + 10) // (FPS // 6)
+        return door_textures[(frame, orientation)]
+
 
 
 class Camera:
@@ -1186,12 +1147,12 @@ class PlayerAnimation:
 #         self.rect.center = x, y
 
 
-class Furniture(pygame.sprite.Sprite):
-    def __init__(self, x, y, type):
-        super().__init__(all_sprites, furniture, walls)
-        self.image = table8
-        self.rect = self.image.get_rect()
-        self.rect.topleft = x, y
+# class Furniture(pygame.sprite.Sprite):
+#     def __init__(self, x, y, type):
+#         super().__init__(all_sprites, furniture, walls)
+#         self.image = table8
+#         self.rect = self.image.get_rect()
+#         self.rect.topleft = x, y
 
 
 class MapTexture(pygame.sprite.Sprite):
@@ -1245,33 +1206,27 @@ if __name__ == '__main__':
 
     im1 = pygame.image.load('1.png').convert()
     im1.set_colorkey((0, 0, 0))
-    tile1 = pygame.image.load('assets/floor_textures/tile_square_dark.png').convert()
-    table8 = pygame.image.load('assets/furniture/table_8per_1.png').convert()
-    table8.set_colorkey((185, 122, 86))
+
     map_image = pygame.image.load('assets/map_100_texture.png')
+
+    door_textures = {}
+    for i in range(1, 7):
+        for j in {'vert', 'hor'}:
+            door_textures[(i, j)] = pygame.image.load(f'assets/door_textures/frame{i}_{j}.png')
 
     player_anim = PlayerAnimation()
     running = True
-    Bullet(10, 10, 1.4, 3.8, damage=10)
-    # LootBox(200, 200)
     MedkitLootbox(500, 500)
     MedkitLootbox(500, 700)
-    Door(400, 200, 0)
     camera = Camera()
-    enemy1 = Enemy(
-        [['go', 3700, 1500], ['stop', 140], ['go', 3900, 1500], ['go', 3900, 1700], ['go', 3700, 1700], ['stop', 70],
-         ['go', 3700, 1500]])
+    # enemy1 = Enemy([['go', 3800, 1500], ['go', 4400, 4150], ['go', 250, 100],
+    #                 ['go', 500, 100],
+    #                 ['stop', 100], ['go', 100, 100]])
 
-    player = Player(3800, 1500)  # 550, 550  # 4500, 4250
-    # Tile(4500, 4200)
+    player = Player(550, 1400)  # 550, 550  # 4500, 4250  # 3800,1500
     MapTexture()
-    # Furniture(3750, 1150, 1)
-    # Furniture(3500, 1150, 1)
     wall_layout = pic_to_map(
         'assets/map100.png')  # массив из пикселей картинки, где находится стена
-    # for wall in walls:
-    #     print(wall.rect.center)
-    # tr = pygame.Surface((1400, 750))
     while running:
         # tr.fill((0,0,0,0))
         # внутри игрового цикла ещё один цикл
@@ -1310,9 +1265,9 @@ if __name__ == '__main__':
         other_sprites.draw(screen)
         doors.draw(screen)
         # затемнение экрана
-        surface2 = pygame.Surface(size)
-        surface2.set_alpha(140)
-        screen.blit(surface2, (0, 0))
+        # surface2 = pygame.Surface(size)
+        # surface2.set_alpha(140)
+        # screen.blit(surface2, (0, 0))
 
         doors.update()
         for i in characters:
@@ -1322,9 +1277,9 @@ if __name__ == '__main__':
         # player.draw_health_bar('green', player.health)
         for lootbox in lootboxes:
             lootbox.draw_open_progress()
-        enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery,
-                    player.rect.centerx,
-                    player.rect.centery)
+        # enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery,
+        #             player.rect.centerx,
+        #             player.rect.centery)
         # player.tracing()
         # pygame.draw.rect(screen, 'red', player.rect, width=1)
         # pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
@@ -1333,18 +1288,15 @@ if __name__ == '__main__':
                                               'red'), (100, 100))
 
         # anim debug
-        # screen.blit(
-        #     pygame.font.Font(None, 40).render(str(player.get_current_state()),
-        #                                       True,
-        #                                       'red'), (100, 200))
-        # screen.blit(pygame.font.Font(None, 40).render(
-        #     f'i{player.anim_idle_cnt}/r{player.anim_reload_cnt}/a{player.anim_attack_cnt}/m{player.anim_move_cnt}',
-        #     True,
-        #     'red'), (100, 300))
-        #
-        # screen.blit(
-        #     pygame.font.Font(None, 40).render(f'{player.real_posx}, {player.real_posy}', True,
-        #                                       'red'), (100, 500))
+        screen.blit(
+            pygame.font.Font(None, 40).render(str(player.get_current_state()),
+                                              True,
+                                              'red'), (100, 200))
+        screen.blit(pygame.font.Font(None, 40).render(
+            f'i{player.anim_idle_cnt}/r{player.anim_reload_cnt}/a{player.anim_attack_cnt}/m{player.anim_move_cnt}',
+            True,
+            'red'), (100, 300))
+
         player.draw_interface()
         clock.tick(FPS)
         # screen.blit(tmp_image, (player.rect.x, player.rect.y))

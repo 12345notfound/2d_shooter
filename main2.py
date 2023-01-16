@@ -21,17 +21,30 @@ import os
 #         for file in files:
 #             convert_image(f'{cdir}/{file}')
 
-os.chdir('assets/player_sprites')
-for i in {'handgun', 'shotgun', 'rifle', 'knife'}:
-    for cdir, dirs, files in os.walk(f'{i}'):
-        # print(cdir)
-        for file in files:
-            file_split = file.split('_')
-            file_split[2] = file_split[2].rjust(3, '0')
-            os.rename(f'{cdir}/{file}', f'{cdir}/{"".join(file_split)}')
+# os.chdir('assets/player_sprites')
+# for i in {'handgun', 'shotgun', 'rifle', 'knife'}:
+#     for cdir, dirs, files in os.walk(f'{i}'):
+#         # print(cdir)
+#         for file in files:
+#             file_split = file.split('_')
+#             file_split[2] = file_split[2].rjust(3, '0')
+#             os.rename(f'{cdir}/{file}', f'{cdir}/{"".join(file_split)}')
 
 # im = Image.open('assets/player_sprites/handgun/shoot/survivor-shoot_handgun_0_reworked.png')
 # im2 = im.resize((160, 160))
 # pixels = im2.load()
 # print(pixels[0, 0])
 # im2.save('1.png')
+
+
+im = Image.open('assets/cap.png')
+im2 = im.copy()
+pixels2 = im2.load()
+x, y = im.size
+pixels = im.load()
+for i in range(x):
+    for j in range(y):
+        t = pixels[i, j]
+        if t[0] ** 2 + t[1] ** 2 + t[2] ** 2 <= 9600:
+            pixels2[i, j] = ((t[0] + 128) // 2, int(t[1] * 1.2) // 2, int(t[2] * 1.2) // 2)
+im2.save('assets/cap1.png')
