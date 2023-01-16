@@ -876,6 +876,12 @@ class Enemy(Entity):
         self.reset_target = 0
         self.distance_beam = [False,
                               False]  # первая означает персонаж находится "вплотную", вторая-луч не пересекат стен и расстояние "небольшое"
+        self.const_turn_observation = 60
+        self.left_turn = self.const_turn_observation
+        self.right_turn = self.const_turn_observation * 2
+        self.angle_observation = False
+        self.desired_angle = False
+        self.weapon_enemy = Ak_47_enemy(self)
 
     # def is_visible(self):
     #     if (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 > 250000:
@@ -903,13 +909,14 @@ class Enemy(Entity):
             self.condition = 'Action'
 
     def See(self):
-        self.direction_player = self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
-                                                       player.rect.centery)
-        if abs(self.direction_player - self.direction) <= 8:
-            self.direction = self.direction_player
+        direction_player = self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
+                                                  player.rect.centery)
+        if abs(direction_player - self.direction) <= 8:
+            self.direction = direction_player
+            self.weapon_enemy.update()
             # функция стрельбы
         else:
-            if 0 <= (self.direction - self.direction_player) <= 180 or (self.direction - self.direction_player) <= -180:
+            if 0 <= (self.direction - direction_player) <= 180 or (self.direction - direction_player) <= -180:
                 self.direction -= 8
                 if self.direction < -180:
                     self.direction += 360
@@ -933,7 +940,81 @@ class Enemy(Entity):
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def run(self):
-        pass
+        direction_way = self.determining_angle(int(self.real_posx), int(self.real_posy),
+                                               self.trajectory[self.trajectory_pos + 1][1],
+                                               self.trajectory[self.trajectory_pos + 1][2])
+
+        if abs(direction_way - self.direction) <= 4:
+            self.direction = direction_way
+            if (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
+                    int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2 > self.speed ** 2:
+                self.image = pygame.transform.rotate(im1, self.direction + 90)
+                self.move_entity(int(-sin(radians(self.direction)) * self.speed),
+                                 int(-cos(radians(self.direction)) * self.speed))
+            else:
+                self.move_entity(int(-sin(radians(self.direction)) * (
+                        (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
+                        int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2) ** 0.5),
+                                 int(-cos(radians(self.direction)) * ((int(self.real_posx) -
+                                                                       self.trajectory[self.trajectory_pos + 1][
+                                                                           1]) ** 2 + (
+                                                                              int(self.real_posy) -
+                                                                              self.trajectory[
+                                                                                  self.trajectory_pos + 1][
+                                                                                  2]) ** 2) ** 0.5))
+                self.real_posx, self.real_posy = self.trajectory[self.trajectory_pos + 1][1:3]
+                self.trajectory_pos += 1
+                self.trajectory_pos %= len(self.trajectory) - 1
+                if self.trajectory[self.trajectory_pos + 1][0] == 'stop':
+                    self.angle_observation = self.trajectory[self.trajectory_pos + 1][1]
+        else:
+            if 0 <= (self.direction - direction_way) <= 180 or (self.direction - direction_way) <= -180:
+                self.direction -= 4
+                if self.direction < -180:
+                    self.direction += 360
+            else:
+                self.direction += 4
+                if self.direction > 180:
+                    self.direction -= 360
+        self.image = pygame.transform.rotate(im1, self.direction + 90)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+    def observation(self):
+        if self.desired_angle:
+            if self.left_turn >= 0:
+                self.direction -= 1
+                self.left_turn -= 1
+                if self.direction < -180:
+                    self.direction += 360
+            elif self.right_turn >= 0:
+                self.direction += 1
+                self.right_turn -= 1
+                if self.direction > 180:
+                    self.direction -= 360
+            else:
+                self.angle_observation = False
+                self.desired_angle = False
+                self.left_turn = self.const_turn_observation
+                self.right_turn = self.const_turn_observation * 2
+                self.trajectory_pos += 1
+                self.trajectory_pos %= len(self.trajectory) - 1
+                if self.trajectory[self.trajectory_pos + 1][0] == 'stop':
+                    self.angle_observation = self.trajectory[self.trajectory_pos + 1][1]
+        elif abs(self.angle_observation - self.direction) <= 2:
+            self.direction = self.angle_observation
+            self.desired_angle = True
+        else:
+            if 0 <= (self.direction - self.angle_observation) <= 180 or (
+                    self.direction - self.angle_observation) <= -180:
+                self.direction -= 1
+                if self.direction < -180:
+                    self.direction += 360
+            else:
+                self.direction += 1
+                if self.direction > 180:
+                    self.direction -= 360
+        self.image = pygame.transform.rotate(im1, self.direction + 90)
+        self.rect = self.image.get_rect(center=self.rect.center)
 
     def update(self):
         self.detection_player()
@@ -942,41 +1023,15 @@ class Enemy(Entity):
         elif self.condition == 'Lost':
             self.Lost()
         else:
-            if len(self.trajectory) != 1 and self.stop == 0:
-                if (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
-                        int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2 >= self.speed ** 2:
-                    self.direction = self.determining_angle(int(self.real_posx), int(self.real_posy),
-                                                            self.trajectory[self.trajectory_pos + 1][1],
-                                                            self.trajectory[self.trajectory_pos + 1][2])
-                    self.image = pygame.transform.rotate(im1, self.direction + 90)
-                    self.move_entity(int(-sin(radians(self.direction)) * self.speed),
-                                     int(-cos(radians(self.direction)) * self.speed))
-                    # self.real_posx -= sin(radians(self.direction)) * self.speed
-                    # self.real_posy -= cos(radians(self.direction)) * self.speed
-                else:
-                    self.move_entity(int(-sin(radians(self.direction)) * (
-                            (int(self.real_posx) - self.trajectory[self.trajectory_pos + 1][1]) ** 2 + (
-                            int(self.real_posy) - self.trajectory[self.trajectory_pos + 1][2]) ** 2) ** 0.5),
-                                     int(-cos(radians(self.direction)) * ((int(self.real_posx) -
-                                                                           self.trajectory[self.trajectory_pos + 1][
-                                                                               1]) ** 2 + (
-                                                                                  int(self.real_posy) -
-                                                                                  self.trajectory[
-                                                                                      self.trajectory_pos + 1][
-                                                                                      2]) ** 2) ** 0.5))
-                    self.real_posx, self.real_posy = self.trajectory[self.trajectory_pos + 1][1:3]
-                    self.trajectory_pos += 1
-                    self.trajectory_pos %= len(self.trajectory) - 1
-                    if self.trajectory[self.trajectory_pos + 1][0] == 'stop':
-                        self.stop = self.trajectory[self.trajectory_pos + 1][1]
-            elif self.stop != 0:
-                self.direction += 2
-                self.image = pygame.transform.rotate(im1, self.direction)
-                self.stop -= 1
-                if self.stop == 0:
-                    self.trajectory_pos += 1
-                    self.trajectory_pos %= len(self.trajectory) - 1
-            self.rect = self.image.get_rect(center=self.rect.center)
+            if self.trajectory_pos == 0:
+                if self.trajectory[self.trajectory_pos + 1][0] == 'stop':
+                    self.angle_observation = self.trajectory[self.trajectory_pos + 1][1]
+            if len(self.trajectory) != 1:
+                if not self.angle_observation:
+                    self.run()
+                elif self.angle_observation:
+                    self.observation()
+
 
 
 class Wall(pygame.sprite.Sprite):
