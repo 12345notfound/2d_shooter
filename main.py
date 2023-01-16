@@ -161,7 +161,7 @@ class Weapon:
             self.reload_update()
         else:
             if self.clip > 0:
-                if pygame.mouse.get_pressed()[0] and self.frequency_now <= 0:
+                if (pygame.mouse.get_pressed()[0] or type(self.who) == Enemy) and self.frequency_now <= 0:
                     self.spread_now = 1
                     self.queue_counter += 1
                     if self.queue_counter >= self.queue and self.queue >= 0:
@@ -245,7 +245,7 @@ class Shotgun(Weapon):
 
     def spawn_bullet(self, turn, damage):
         for _ in range(9):
-            pellet_spread = random.randint(-9, 9)
+            pellet_spread = random.randint(-6, 6)
             turn += pellet_spread
             ShotgunBullet(self.who.rect.centerx - sin(
                 radians(turn)) * 55, self.who.rect.centery - cos(
@@ -392,9 +392,12 @@ class Bullet(pygame.sprite.Sprite):
             # pygame.sprite.spritecollide(self, walls, False)
             if defining_intersection(
                     translation_coordinates(self.rect.centerx - 5,
-                                            self.rect.centery - 5), 10,
-                    10, 'bullet') or pygame.sprite.spritecollide(self, characters,
-                                                       False):
+                                            self.rect.centery - 5), 10,10, 'bullet'):
+                self.kill()
+            sprites = pygame.sprite.spritecollide(self, characters,
+                                                       False)
+            if sprites:
+                sprites[0].take_damage(self.damage)
                 self.kill()
 
 
@@ -544,8 +547,9 @@ class Entity(pygame.sprite.Sprite):
         return weapontype, states[state], frame_num
 
     def take_damage(self, damage):
-        self.health -= damage
+        self.health -= damage * 0.1
         if self.health <= 0:
+            self.health = 0
             self.kill()
 
     def move_entity(self, x, y):
@@ -662,10 +666,16 @@ class Player(Entity):
         self.current_weapon = 1
         self.medkits = 0
         self.range = 15000
+        self.max_health = self.health = 100
         self.wall_hitbox = self.image.get_rect(center=self.rect.center, width=54, height=54)
         self.wall_hitbox.h = self.wall_hitbox.w = 54
 
-        # self.wall_hitbox.move(1, 1)
+    def kill(self):
+        self.end_game()
+
+    def end_game(self):
+        """конец игры"""
+        pass
 
     def get_current_weapon(self):
         """Возвращает текущее оружие игрока"""
@@ -683,6 +693,18 @@ class Player(Entity):
                                          (255, 255, 255))
         screen.blit(self.ammo_str, (int(width * 0.88), int(height * 0.80)))
         self.get_current_weapon().draw_interface()
+        screen.blit(medkit_image, (int(width * 0.868), int(height * 0.84)))
+
+        pygame.draw.rect(screen, width=1, rect=(
+            int(width * 0.1), int(height * 0.8), 100, 30),
+                         color='black')
+        pygame.draw.rect(screen, width=0,
+                         rect=(int(width * 0.1) + 1, int(height * 0.8) + 1,
+                               100 * self.health / self.max_health, 30),
+                         color='green')
+        self.health_str = self.font.render(f'{self.health}/{self.max_health}', True, (255, 255, 255))
+        screen.blit(self.health_str, (int(width * 0.1) + 15, int(height * 0.8) + 40))
+
 
     def get_nearest_door(self):
         """Возвращает ближайшую к игроку дверь"""
@@ -872,6 +894,7 @@ class Enemy(Entity):
         self.real_posy = trajectory[0][2]
         self.speed = speed
         self.stop = 0
+        self.max_health = self.health = 200
         self.direction = 0
         self.reset_target = 0
         self.distance_beam = [False,
@@ -881,7 +904,7 @@ class Enemy(Entity):
         self.right_turn = self.const_turn_observation * 2
         self.angle_observation = False
         self.desired_angle = False
-        self.weapon_enemy = Ak_47_enemy(self)
+        self.weapon_enemy = Ak_47(self)
 
     # def is_visible(self):
     #     if (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 > 250000:
@@ -889,6 +912,19 @@ class Enemy(Entity):
     #     elif (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 < 10000:
     #         return True
     #     elif self.beam(player.rect.x, player.rect.y, self.rect.x, self.rect.y)
+
+    def get_current_weapon(self):
+        return self.weapon_enemy
+
+    def get_current_state(self):
+        if self.is_attacking:
+            return 1
+        else:
+            return 2
+
+    def all_anims_update(self):
+        self.anim_attack_update()
+        self.anim_is_moving_update()
 
     def detection_player(self):
         if self.distance_beam[0]:
@@ -1031,7 +1067,11 @@ class Enemy(Entity):
                     self.run()
                 elif self.angle_observation:
                     self.observation()
-
+        self.all_anims_update()
+        self.image = pygame.transform.rotate(
+            enemy_anim.get_current_image(
+                *self.get_current_image_info()), self.direction + 90)
+        self.rect = self.image.get_rect(center=self.rect.center)
 
 
 class Wall(pygame.sprite.Sprite):
@@ -1194,6 +1234,23 @@ class PlayerAnimation:
         return self.animations[weapon][state][frame_num]
 
 
+class EnemyAnimation:
+    def __init__(self):
+        self.animations = {'rifle': {
+            'move': [],
+            'shoot': []
+        }}
+        for cdir, dirs, files in os.walk('assets/enemy_sprites'):
+            for file in files:
+                a1, a2 = cdir.split('\\')[1:]
+                self.animations[a1][a2].append(
+                    pygame.image.load(f'{cdir}\\{file}'))
+
+    def get_current_image(self, weapon, state, framenum):
+        return self.animations[weapon][state][framenum]
+
+
+
 # class Tile(pygame.sprite.Sprite):
 #     def __init__(self, x, y):
 #         super().__init__(all_sprites, tiles)
@@ -1258,6 +1315,8 @@ if __name__ == '__main__':
     knife_image.set_colorkey((255, 255, 255))
     shotgun_image = pygame.image.load('assets/shotgun_image.png').convert()
     shotgun_image.set_colorkey((255, 255, 255))
+    medkit_image = pygame.image.load('assets/medkit.png').convert()
+
 
     im1 = pygame.image.load('1.png').convert()
     im1.set_colorkey((0, 0, 0))
@@ -1270,13 +1329,14 @@ if __name__ == '__main__':
             door_textures[(i, j)] = pygame.image.load(f'assets/door_textures/frame{i}_{j}.png')
 
     player_anim = PlayerAnimation()
+    enemy_anim = EnemyAnimation()
     running = True
     MedkitLootbox(500, 500)
     MedkitLootbox(500, 700)
     camera = Camera()
-    # enemy1 = Enemy([['go', 3800, 1500], ['go', 4400, 4150], ['go', 250, 100],
-    #                 ['go', 500, 100],
-    #                 ['stop', 100], ['go', 100, 100]])
+    enemy1 = Enemy([['go', 3800, 1600], ['go', 3800, 170], ['go', 250, 100],
+                    ['go', 500, 100],
+                    ['stop', 100], ['go', 100, 100]])
 
     player = Player(550, 1400)  # 550, 550  # 4500, 4250  # 3800,1500
     MapTexture()
