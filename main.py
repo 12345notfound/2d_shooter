@@ -392,9 +392,12 @@ class Bullet(pygame.sprite.Sprite):
             # pygame.sprite.spritecollide(self, walls, False)
             if defining_intersection(
                     translation_coordinates(self.rect.centerx - 5,
-                                            self.rect.centery - 5), 10,
-                    10, 'bullet') or pygame.sprite.spritecollide(self, characters,
-                                                       False):
+                                            self.rect.centery - 5), 10,10, 'bullet'):
+                self.kill()
+            sprites = pygame.sprite.spritecollide(self, characters,
+                                                       False)
+            if sprites:
+                sprites[0].take_damage(self.damage)
                 self.kill()
 
 
@@ -544,8 +547,9 @@ class Entity(pygame.sprite.Sprite):
         return weapontype, states[state], frame_num
 
     def take_damage(self, damage):
-        self.health -= damage
+        self.health -= damage * 0.1
         if self.health <= 0:
+            self.health = 0
             self.kill()
 
     def move_entity(self, x, y):
@@ -662,10 +666,16 @@ class Player(Entity):
         self.current_weapon = 1
         self.medkits = 0
         self.range = 15000
+        self.max_health = self.health = 100
         self.wall_hitbox = self.image.get_rect(center=self.rect.center, width=54, height=54)
         self.wall_hitbox.h = self.wall_hitbox.w = 54
 
-        # self.wall_hitbox.move(1, 1)
+    def kill(self):
+        self.end_game()
+
+    def end_game(self):
+        """конец игры"""
+        pass
 
     def get_current_weapon(self):
         """Возвращает текущее оружие игрока"""
@@ -683,6 +693,18 @@ class Player(Entity):
                                          (255, 255, 255))
         screen.blit(self.ammo_str, (int(width * 0.88), int(height * 0.80)))
         self.get_current_weapon().draw_interface()
+        screen.blit(medkit_image, (int(width * 0.868), int(height * 0.84)))
+
+        pygame.draw.rect(screen, width=1, rect=(
+            int(width * 0.1), int(height * 0.8), 100, 30),
+                         color='black')
+        pygame.draw.rect(screen, width=0,
+                         rect=(int(width * 0.1) + 1, int(height * 0.8) + 1,
+                               100 * self.health / self.max_health, 30),
+                         color='green')
+        self.health_str = self.font.render(f'{self.health}/{self.max_health}', True, (255, 255, 255))
+        screen.blit(self.health_str, (int(width * 0.1) + 15, int(height * 0.8) + 40))
+
 
     def get_nearest_door(self):
         """Возвращает ближайшую к игроку дверь"""
@@ -872,6 +894,7 @@ class Enemy(Entity):
         self.real_posy = trajectory[0][2]
         self.speed = speed
         self.stop = 0
+        self.max_health = self.health = 200
         self.direction = 0
         self.reset_target = 0
         self.distance_beam = [False,
@@ -1292,6 +1315,8 @@ if __name__ == '__main__':
     knife_image.set_colorkey((255, 255, 255))
     shotgun_image = pygame.image.load('assets/shotgun_image.png').convert()
     shotgun_image.set_colorkey((255, 255, 255))
+    medkit_image = pygame.image.load('assets/medkit.png').convert()
+
 
     im1 = pygame.image.load('1.png').convert()
     im1.set_colorkey((0, 0, 0))
