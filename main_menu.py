@@ -14,7 +14,7 @@ def reading(name):
     result = cur.execute(f"""SELECT * FROM Data
                 WHERE name = '{name}'""").fetchall()
     con.close()
-    return result[0][3], result[0][4:]
+    return result[0][3], result[0][4:7]
 
 
 def separation():

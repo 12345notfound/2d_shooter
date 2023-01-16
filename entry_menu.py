@@ -25,7 +25,7 @@ def addendum(login, password):
     con = sqlite3.connect("Базы данных/Данные аккаунтов.db")
     cur = con.cursor()
     cur.execute(
-        f"""INSERT INTO Data(name, password, money, training_1, training_2, lvl_1) VALUES('{login}','{password}', '0', '0', '0', '0')""").fetchall()
+        f"""INSERT INTO Data(name, password, money, training_1, training_2, lvl_1) VALUES('{login}','{password}', '0', '0', '0', '0','0')""").fetchall()
     con.commit()
     con.close()
 
