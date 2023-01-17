@@ -114,39 +114,39 @@ class text_output:
     def update(self):
         self.screen.blit(self.txt_surface, (self.x, self.y))
 
-# if __name__ == '__main__':
-#     pygame.init()
-#     pygame.display.set_caption('Движущийся круг 2')
-#     size = width, height = 800, 400
-#     screen = pygame.display.set_mode(size)
-#
-#     button = pygame.sprite.Group()
-#
-#     # background = pygame.image.load('assets/knife_image.png').convert()
-#     # background.set_colorkey((255, 255, 255))
-#     Button_rect(50, 50, 200, 100, lambda: print(1))
-#     Button_circle(400, 400, 100, lambda: print(1))
-#
-#     fps = 90  # количество кадров в секунду
-#     clock = pygame.time.Clock()
-#     running = True
-#     while running:  # главный игровой цикл
-#         for event in pygame.event.get():
-#             if event.type == pygame.QUIT:
-#                 running = False
-#             if event.type == pygame.KEYDOWN:
-#                 print(event.unicode)
-#         screen.fill('black')
-#         button.update()
-#         # обработка остальных событий
-#         # ...
-#         # формирование кадра
-#         # ...
-#         screen.blit(
-#             pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True,
-#                                               'red'), (100, 100))
-#         pygame.display.flip()  # смена кадра
-#         # изменение игрового мира
-#         # ...
-#         # временная задержка
-#         clock.tick(fps)
+if __name__ == '__main__':
+    pygame.init()
+    pygame.display.set_caption('Движущийся круг 2')
+    size = width, height = 800, 400
+    screen = pygame.display.set_mode(size)
+
+    button = pygame.sprite.Group()
+
+    # background = pygame.image.load('assets/knife_image.png').convert()
+    # background.set_colorkey((255, 255, 255))
+    Button_rect(50, 50, 200, 100, lambda: print(1))
+    Button_circle(400, 400, 100, lambda: print(1))
+
+    fps = 90  # количество кадров в секунду
+    clock = pygame.time.Clock()
+    running = True
+    while running:  # главный игровой цикл
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                print(event.unicode)
+        screen.fill('black')
+        button.update()
+        # обработка остальных событий
+        # ...
+        # формирование кадра
+        # ...
+        screen.blit(
+            pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True,
+                                              'red'), (100, 100))
+        pygame.display.flip()  # смена кадра
+        # изменение игрового мира
+        # ...
+        # временная задержка
+        clock.tick(fps)

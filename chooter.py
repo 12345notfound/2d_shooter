@@ -246,11 +246,11 @@ def pic_to_map(filename):
     result = [[False for _ in range(y)] for _ in range(x)]
     for i in range(x):
         for j in range(y):
-            if pixels[i, j] == (237, 28, 36):  # 237,28,36 / 0,0,0
+            if pixels[i, j][:3] == (237, 28, 36):  # 237,28,36 / 0,0,0
                 Wall(i * 50, j * 50)
                 result[i][j] = True
-            elif pixels[i, j] == (34, 177, 76):
-                if pixels[i + 1, j] == (255, 242, 0):
+            elif pixels[i, j][:3] == (34, 177, 76):
+                if pixels[i + 1, j][:3] == (255, 242, 0):
                     Door(i * 50 + 25, j * 50, 1)
                     result[i][j] = [True, 1]
                     result[i + 1][j] = [True, 1]
@@ -258,7 +258,7 @@ def pic_to_map(filename):
                     Door(i * 50, j * 50 + 25, 0)
                     result[i][j + 1] = [True, 0]
                     result[i][j] = [True, 0]
-            elif pixels[i, j] == (195, 195, 195):
+            elif pixels[i, j][:3] == (195, 195, 195):
                 result[i][j] = 3
 
     # возвращает массив с расположнием стен и дверей
@@ -305,12 +305,9 @@ def defining_intersection(coord, size_x, size_y, who):
     if size_x == 1 and size_y == 1:
         return data_translation(x_real, y_real, who)
     else:
-        return data_translation(x_real, y_real, who) or data_translation((x_real + size_x - 1), (y_real + size_y - 1),
-                                                                         who) or \
-               data_translation((x_real + size_x - 1), y_real, who) or data_translation(x_real, (y_real + size_y - 1),
-                                                                                        who) or \
-               data_translation((x_real + size_x // 2), y_real, who) or data_translation(x_real, (y_real + size_y // 2),
-                                                                                         who) or \
+        return data_translation(x_real, y_real, who) or data_translation((x_real + size_x - 1), (y_real + size_y - 1), who) or \
+               data_translation((x_real + size_x - 1), y_real, who) or data_translation(x_real, (y_real + size_y - 1), who) or \
+               data_translation((x_real + size_x // 2), y_real, who) or data_translation(x_real, (y_real + size_y // 2), who) or \
                data_translation((x_real + size_x // 2), (y_real + size_y - 1), who) or \
                data_translation((x_real + size_x - 1), (y_real + size_y // 2), who)
 
@@ -625,10 +622,10 @@ class Bullet(pygame.sprite.Sprite):
             # pygame.sprite.spritecollide(self, walls, False)
             if defining_intersection(
                     translation_coordinates(self.rect.centerx - 5,
-                                            self.rect.centery - 5), 10, 10, 'bullet'):
+                                            self.rect.centery - 5), 10,10, 'bullet'):
                 self.kill()
             sprites = pygame.sprite.spritecollide(self, characters,
-                                                  False)
+                                                       False)
             if sprites:
                 sprites[0].take_damage(self.damage)
                 self.kill()
@@ -678,6 +675,20 @@ class Entity(pygame.sprite.Sprite):
         self.anim_reload_cnt = 0
         self.is_attacking = False
         self.anim_attack_cnt = 0
+
+    def get_nearest_door(self):
+        """Возвращает ближайшую к игроку дверь"""
+        min_dist = 1000000000000  # очень большая константа
+        nearest_door = None  # ближайшая дверь
+        for door in doors:
+            if (self.rect.centerx - door.rect.centerx) ** 2 + (
+                    self.rect.centery - door.rect.centery) ** 2 < min_dist:
+                min_dist = (
+                                   self.rect.centerx - door.rect.centerx) ** 2 + (
+                                   self.rect.centery - door.rect.centery) ** 2
+                nearest_door = door
+        return nearest_door
+
 
     def reset_reload_attack(self):
         self.is_reloading = False
@@ -938,6 +949,7 @@ class Player(Entity):
         self.health_str = self.font.render(f'{self.health}/{self.max_health}', True, (255, 255, 255))
         screen.blit(self.health_str, (int(width * 0.1) + 15, int(height * 0.8) + 40))
 
+
     def get_nearest_door(self):
         """Возвращает ближайшую к игроку дверь"""
         min_dist = 1000000000000  # очень большая константа
@@ -1124,7 +1136,7 @@ class Enemy(Entity):
         self.detection = False  # видит ли игрока
         self.real_posx = trajectory[0][1]
         self.real_posy = trajectory[0][2]
-        self.speed = speed
+        self.speed = 3
         self.stop = 0
         self.max_health = self.health = 200
         self.direction = 0
@@ -1285,7 +1297,12 @@ class Enemy(Entity):
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def update(self):
+        door = self.get_nearest_door()
+        if door is not None:
+            if (self.rect.centerx - door.rect.centerx) ** 2 + (self.rect.centery - door.rect.centery) ** 2 < 10000 and not door.is_open:
+                door.use()
         self.detection_player()
+        # self.condition = 'qwerty'  # for godmode :)
         if self.condition == 'See':
             self.See()
         elif self.condition == 'Lost':
@@ -1378,6 +1395,7 @@ class Door(pygame.sprite.Sprite):
             self.delay = self.max_delay
             self.change_image()
 
+
     def change_image(self):
         # if self.is_open:
         #     self.image.fill((0, 128, 0))
@@ -1409,6 +1427,7 @@ class Door(pygame.sprite.Sprite):
             else:
                 frame = (self.delay + 10) // (FPS // 6)
         return door_textures[(frame, orientation)]
+
 
 
 class Camera:
@@ -1480,6 +1499,7 @@ class EnemyAnimation:
         return self.animations[weapon][state][framenum]
 
 
+
 # class Tile(pygame.sprite.Sprite):
 #     def __init__(self, x, y):
 #         super().__init__(all_sprites, tiles)
@@ -1504,6 +1524,27 @@ class MapTexture(pygame.sprite.Sprite):
         self.image = map_image
         self.rect = self.image.get_rect()
         self.rect.topleft = -25, -25
+
+
+def spawn_enemies():
+    # Enemy([['go', 3800, 1600], ['go', 3800, 170], ['go', 250, 100],
+    #        ['go', 500, 100],
+    #        ['stop', 100], ['go', 100, 100]])
+    with open('trajectories.txt', mode='r') as file:
+        lines = file.readlines()
+        arr = []
+        for i in lines:
+            if i[:5] == 'enemy':
+                Enemy(arr)
+                arr = []
+            elif i[:4] == 'stop':
+                arr.append(['stop', int(i.split()[1])])
+            else:
+                f = i.split()
+                # print(f)
+                arr.append(['go', int(f[0]), int(f[1])])
+    # for enemy in enemies:
+        # print(enemy.trajectory)
 
 
 if __name__ == '__main__':
@@ -1546,6 +1587,7 @@ if __name__ == '__main__':
     shotgun_image.set_colorkey((255, 255, 255))
     medkit_image = pygame.image.load('assets/medkit.png').convert()
 
+
     im1 = pygame.image.load('1.png').convert()
     im1.set_colorkey((0, 0, 0))
 
@@ -1559,14 +1601,16 @@ if __name__ == '__main__':
     player_anim = PlayerAnimation()
     enemy_anim = EnemyAnimation()
     running = True
+
     MedkitLootbox(500, 500)
     MedkitLootbox(500, 700)
     camera = Camera()
-    enemy1 = Enemy([['go', 3800, 1600], ['go', 3800, 170], ['go', 250, 100],
-                    ['go', 500, 100],
-                    ['stop', 100], ['go', 100, 100]])
+    spawn_enemies()
+    # enemy1 = Enemy([['go', 3800, 1600], ['go', 3800, 170], ['go', 250, 100],
+    #                 ['go', 500, 100],
+    #                 ['stop', 100], ['go', 100, 100]])
 
-    player = Player(550, 1400)  # 550, 550  # 4500, 4250  # 3800,1500
+    player = Player(4550, 4280)  # 550, 550  # 4500, 4250  # 3800,1500
     MapTexture()
     wall_layout = pic_to_map(
         'assets/map100.png')  # массив из пикселей картинки, где находится стена
@@ -1605,6 +1649,7 @@ if __name__ == '__main__':
         # walls_rendering.draw(screen)
 
         characters_rendering.draw(screen)
+        # enemies.draw(screen)
         other_sprites.draw(screen)
         doors.draw(screen)
         # затемнение экрана
@@ -1627,22 +1672,10 @@ if __name__ == '__main__':
         # pygame.draw.rect(screen, 'red', player.rect, width=1)
         # pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
         screen.blit(
-            pygame.font.Font(None, 40).render(str(len(enemies)), True,
+            pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True,
                                               'red'), (100, 100))
-        # screen.blit(
-        #     pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True,
-        #                                       'red'), (100, 100))
-        #
-        # # anim debug
-        # screen.blit(
-        #     pygame.font.Font(None, 40).render(str(player.get_current_state()),
-        #                                       True,
-        #                                       'red'), (100, 200))
-        # screen.blit(pygame.font.Font(None, 40).render(
-        #     f'i{player.anim_idle_cnt}/r{player.anim_reload_cnt}/a{player.anim_attack_cnt}/m{player.anim_move_cnt}',
-        #     True,
-        #     'red'), (100, 300))
 
+        # screen.blit(pygame.font.Font(None, 40).render('/'.join([str((x.real_posx, x.real_posy)) for x in enemies]), True, 'red'), (100, 200))
         player.draw_interface()
         clock.tick(FPS)
         # screen.blit(tmp_image, (player.rect.x, player.rect.y))
