@@ -2,10 +2,6 @@ import pygame
 from interface import text_output, InputBox, Button_rect
 import sqlite3
 import hashlib
-import os
-import random
-from math import sin, radians, cos, asin, pi, degrees
-from PIL import Image
 
 
 def search(login, name_column):
@@ -35,7 +31,7 @@ def addendum(login, password):
 
 
 def registration():
-    global text, entry_menu_run, main_menu_run, running, name
+    global text, running, name
     """регистрация и вход в аккаунт"""
 
     login_Account = input_boxes[0].text
@@ -47,23 +43,20 @@ def registration():
             text.change_text(f'{password_check(password_Account)}')
         else:
             addendum(login_Account, hashlib.sha224(bytes(password_Account, encoding='utf-8')).hexdigest())
-            main_menu_run = True
-            entry_menu_run = False
-            running = False
             name = input_boxes[0].text
+            running = False
+            return
 
 
 def Entrance():
     """вход в аккаунт"""
-    global entry_menu_run, main_menu_run, running, name
+    global running, name
     login_Account = input_boxes[0].text
     if search(login_Account, 'Password'):
         if hashlib.sha224(bytes(input_boxes[1].text, encoding='utf-8')).hexdigest() == search(
                 login_Account, 'Password'):
-            entry_menu_run = False
-            main_menu_run = True
-            running = False
             name = input_boxes[0].text
+            running = False
         else:
             text.change_text('Вы ввели неправильный пароль!')
 
@@ -83,6 +76,50 @@ def password_check(password):
             return False
     else:
         return 'Вы ввели слишком короткий пароль!'
+
+
+if __name__ == '__main__':
+    pygame.init()
+    pygame.display.set_caption('2d_shooter')
+    size = width, height = 600, 600
+    screen = pygame.display.set_mode(size)
+
+    background = pygame.image.load('Все для дизайна/Меню регистрации.jpg').convert()
+    background = pygame.transform.smoothscale(background, screen.get_size())
+
+    input_boxes = []
+    input_boxes.append(InputBox(screen, 55, 250, 492, 26, size=24))
+    input_boxes.append(InputBox(screen, 55, 326, 492, 26, size=24))
+
+    buttons = []
+    buttons.append(Button_rect(screen, 42, 372, 250, 60, Entrance))
+    buttons.append(Button_rect(screen, 308, 372, 250, 60, registration))
+
+    text = text_output(screen, 65, 490, text='', size=32)
+
+    fps = 60
+    clock = pygame.time.Clock()
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            for box in input_boxes:
+                box.handle_event(event)
+        screen.blit(background, (0, 0))
+
+        for box in input_boxes:
+            box.draw(screen)
+        for button in buttons:
+            button.update()
+        text.update()
+        pygame.display.flip()
+        clock.tick(fps)
+import pygame
+import sqlite3
+from interface import Button_rect
+
+location_objects = {'1': (345, 143), 'замок': (402, 173), 'надписаь': (358, 194), 'звезда': (374, 276)}
 
 
 def reading(name):
@@ -118,7 +155,7 @@ def separation():
                     location_objects['звезда'][0] + j * 53 + (i - 1) // 2 * 233,
                     location_objects['звезда'][1] + 213 * ((i - 1) % 2), 1400, 700))
 
-        elif i <= 1:
+        elif i <= 2:
             if lvl[i - 2] != 0:
                 button.append(Button_rect(screen, location_objects['1'][0] + (i - 1) // 2 * 233,
                                           location_objects['1'][1] + 213 * ((i - 1) % 2), 200, 187,
@@ -141,10 +178,63 @@ def separation():
 
 
 def open_now(number):
-    global main_menu_run, game1_run, running
-    main_menu_run = False
-    game1_run = True
+    global running
     running = False
+
+
+if __name__ == '__main__':
+    pygame.init()
+    pygame.display.set_caption('2d_shooter')
+    size = width, height = 1400, 700
+    screen = pygame.display.set_mode(size)
+
+    background = pygame.image.load('Все для дизайна/Главное меню игры.jpg').convert()
+    background = pygame.transform.smoothscale(background, screen.get_size())
+    screen.blit(background, (0, 0))
+
+    lvl_text = []
+    for i in range(6):
+        lvl_now = pygame.image.load(f'Все для дизайна/{i + 1} уровень.png')
+        lvl_now.set_colorkey((255, 255, 255))
+        lvl_text.append(lvl_now)
+
+    lock = pygame.image.load(f'Все для дизайна/Замок.png')
+    lock.set_colorkey((255, 255, 255))
+    # for i in range(6):
+    #     lvl_now = pygame.image.load(f'Все для дизайна/замок {i + 1}.png')
+    #     lvl_now.set_colorkey((255, 255, 255))
+    #     lvl_lock.append(lvl_now)
+
+    star = pygame.image.load(f'Все для дизайна/звезда.png')
+    star.set_colorkey((255, 255, 255))
+
+    button = []
+    # button.append(Button_rect(screen, 1035, 24, 331, 50, lambda: open_now(4)))
+    # button.append(Button_rect(screen, 898, 569, 457, 105, lambda: open_now(5)))
+
+    # name = 'Женя'  # самое важное в работе
+    money, lvl = reading(name)
+    screen.blit(background, (0, 0))
+    separation()
+
+    fps = 90
+    clock = pygame.time.Clock()
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        for i in button:
+            i.update()
+        pygame.display.flip()
+        clock.tick(fps)
+import os
+
+import pygame
+import random
+from math import sin, radians, cos, asin, pi, degrees
+
+from PIL import Image
 
 
 def pic_to_map(filename):
@@ -215,12 +305,9 @@ def defining_intersection(coord, size_x, size_y, who):
     if size_x == 1 and size_y == 1:
         return data_translation(x_real, y_real, who)
     else:
-        return data_translation(x_real, y_real, who) or data_translation((x_real + size_x - 1), (y_real + size_y - 1),
-                                                                         who) or \
-               data_translation((x_real + size_x - 1), y_real, who) or data_translation(x_real, (y_real + size_y - 1),
-                                                                                        who) or \
-               data_translation((x_real + size_x // 2), y_real, who) or data_translation(x_real, (y_real + size_y // 2),
-                                                                                         who) or \
+        return data_translation(x_real, y_real, who) or data_translation((x_real + size_x - 1), (y_real + size_y - 1), who) or \
+               data_translation((x_real + size_x - 1), y_real, who) or data_translation(x_real, (y_real + size_y - 1), who) or \
+               data_translation((x_real + size_x // 2), y_real, who) or data_translation(x_real, (y_real + size_y // 2), who) or \
                data_translation((x_real + size_x // 2), (y_real + size_y - 1), who) or \
                data_translation((x_real + size_x - 1), (y_real + size_y // 2), who)
 
@@ -361,9 +448,11 @@ class SniperRifle(Weapon):
 
 class Ak_47(Weapon):
     def __init__(self, whose):
-        super().__init__(speed=60, damage=10, frequency=5,
+        super().__init__(speed=60, damage=15, frequency=5,
                          clip_size=30, ammo=100, who=whose, reload_time=100,
                          queue=15)
+        if type(self.who) == Enemy:
+            self.damage = 2
         self.interface_image = ak_47_image
         self.reload_anim_frames = 20
         self.reload_anim_multiplier = 5
@@ -373,6 +462,8 @@ class Glock(Weapon):
     def __init__(self, whose):
         super().__init__(speed=50, damage=10, frequency=15, clip_size=17,
                          ammo=85, reload_time=45, who=whose)
+        if type(self.who) == Enemy:
+            self.damage = 3
         self.interface_image = glock_image
         self.reload_anim_frames = 15
         self.reload_anim_multiplier = 3
@@ -422,10 +513,10 @@ class Shotgun(Weapon):
 
 class Knife:
     def __init__(self, whose):
-        self.damage = 20
+        self.damage = 200
         self.frequency = 1
         self.frequency_now = 0
-        self.range_squared = 10000
+        self.range_squared = 16000
         self.interface_image = knife_image
         self.attack_anim_frames = 15
         self.who = whose
@@ -459,8 +550,7 @@ class LootBox(pygame.sprite.Sprite):
 
     def __init__(self, x, y):
         super().__init__(all_sprites, other_sprites, lootboxes)
-        self.image = pygame.surface.Surface((50, 50))
-        self.image.fill((192, 0, 192))
+        self.image = ammo_box_image
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
@@ -471,7 +561,15 @@ class LootBox(pygame.sprite.Sprite):
         pass
 
     def use(self):
-        player.get_current_weapon().ammo += 50
+        weapon = player.get_current_weapon()
+        if type(weapon) == Ak_47:
+            weapon.ammo += 10
+        elif type(weapon) == Shotgun:
+            weapon.ammo += 1
+        elif type(weapon) == Glock:
+            weapon.ammo += 10
+        elif type(weapon) == Knife:
+            player.weapon_list[0].ammo += 3 if type(player.weapon_list[0]) == Shotgun else 10
         self.kill()
 
     def reset_timer(self):
@@ -497,6 +595,7 @@ class LootBox(pygame.sprite.Sprite):
 class MedkitLootbox(LootBox):
     def __init__(self, x, y):
         super().__init__(x, y)
+        self.image = medkit_image
 
     def use(self):
         player.medkits += 1
@@ -519,6 +618,7 @@ class Bullet(pygame.sprite.Sprite):
         self.speedx = speed_x  # скорость по х и у
         self.speedy = speed_y
         self.damage = damage  # урон
+        self.damage_dealt = False
 
     def update(self):
         self.float_x = self.rect.centerx + self.speedx / 50 + self.float_x - int(
@@ -535,13 +635,15 @@ class Bullet(pygame.sprite.Sprite):
             # pygame.sprite.spritecollide(self, walls, False)
             if defining_intersection(
                     translation_coordinates(self.rect.centerx - 5,
-                                            self.rect.centery - 5), 10, 10, 'bullet'):
+                                            self.rect.centery - 5), 10,10, 'bullet'):
                 self.kill()
-            sprites = pygame.sprite.spritecollide(self, characters,
-                                                  False)
-            if sprites:
-                sprites[0].take_damage(self.damage)
+            sprites = pygame.sprite.spritecollideany(self, characters,
+                                                       )
+            if sprites is not None and not self.damage_dealt:
+                self.damage_dealt = True
+                sprites.take_damage(self.damage)
                 self.kill()
+
 
 
 class ShotgunBullet(Bullet):
@@ -601,6 +703,7 @@ class Entity(pygame.sprite.Sprite):
                                    self.rect.centery - door.rect.centery) ** 2
                 nearest_door = door
         return nearest_door
+
 
     def reset_reload_attack(self):
         self.is_reloading = False
@@ -703,7 +806,7 @@ class Entity(pygame.sprite.Sprite):
         return weapontype, states[state], frame_num
 
     def take_damage(self, damage):
-        self.health -= damage * 0.1
+        self.health -= damage
         if self.health <= 0:
             self.health = 0
             self.kill()
@@ -826,14 +929,18 @@ class Player(Entity):
         self.wall_hitbox = self.image.get_rect(center=self.rect.center, width=54, height=54)
         self.wall_hitbox.h = self.wall_hitbox.w = 54
 
+    def take_damage(self, damage):
+        self.health -= damage
+        if self.health <= 0:
+            self.health = 0
+            self.kill()
+
     def kill(self):
         self.end_game()
 
     def end_game(self):
         """конец игры"""
-        global running, end_False_run
-        running = False
-        end_False_run = True
+        pass
 
     def get_current_weapon(self):
         """Возвращает текущее оружие игрока"""
@@ -862,6 +969,7 @@ class Player(Entity):
                          color='green')
         self.health_str = self.font.render(f'{self.health}/{self.max_health}', True, (255, 255, 255))
         screen.blit(self.health_str, (int(width * 0.1) + 15, int(height * 0.8) + 40))
+
 
     def get_nearest_door(self):
         """Возвращает ближайшую к игроку дверь"""
@@ -1051,7 +1159,7 @@ class Enemy(Entity):
         self.real_posy = trajectory[0][2]
         self.speed = 3
         self.stop = 0
-        self.max_health = self.health = 200
+        self.max_health = self.health = 100
         self.direction = 0
         self.reset_target = 0
         self.distance_beam = [False,
@@ -1070,6 +1178,21 @@ class Enemy(Entity):
     #         return True
     #     elif self.beam(player.rect.x, player.rect.y, self.rect.x, self.rect.y)
 
+    def kill(self):
+        super().kill()
+        rand = random.random()
+        if rand <= 0.01:
+            MedkitLootbox(self.rect.centerx, self.rect.centery)
+        rand = random.random()
+        if rand < 0.3:
+            LootBox(self.rect.centerx, self.rect.centery)
+
+    def take_damage(self, damage):
+        self.health -= damage * 1
+        if self.health <= 0:
+            self.health = 0
+            self.kill()
+
     def get_current_weapon(self):
         return self.weapon_enemy
 
@@ -1085,19 +1208,14 @@ class Enemy(Entity):
 
     def detection_player(self):
         if self.distance_beam[0]:
-            self.reset_target += 1
-            if abs(self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
-                                                           player.rect.centery)) <= 120 or abs(
-                self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
-                                                        player.rect.centery)) >= 240:
-                self.reset_target = 0
-                self.condition = 'See'
+            self.reset_target = 0
+            self.condition = 'See'
         elif self.distance_beam[1]:
             self.reset_target += 1
             if abs(self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
-                                                           player.rect.centery)) <= 50 or abs(
+                                                           player.rect.centery)) <= 30 or abs(
                 self.direction - self.determining_angle(self.rect.centerx, self.rect.centery, player.rect.centerx,
-                                                        player.rect.centery)) >= 310:
+                                                        player.rect.centery)) >= 330:
                 self.reset_target = 0
                 self.condition = 'See'
         else:
@@ -1217,8 +1335,7 @@ class Enemy(Entity):
     def update(self):
         door = self.get_nearest_door()
         if door is not None:
-            if (self.rect.centerx - door.rect.centerx) ** 2 + (
-                    self.rect.centery - door.rect.centery) ** 2 < 10000 and not door.is_open:
+            if (self.rect.centerx - door.rect.centerx) ** 2 + (self.rect.centery - door.rect.centery) ** 2 < 10000 and not door.is_open:
                 door.use()
         self.detection_player()
         # self.condition = 'qwerty'  # for godmode :)
@@ -1314,6 +1431,7 @@ class Door(pygame.sprite.Sprite):
             self.delay = self.max_delay
             self.change_image()
 
+
     def change_image(self):
         # if self.is_open:
         #     self.image.fill((0, 128, 0))
@@ -1345,6 +1463,7 @@ class Door(pygame.sprite.Sprite):
             else:
                 frame = (self.delay + 10) // (FPS // 6)
         return door_textures[(frame, orientation)]
+
 
 
 class Camera:
@@ -1416,6 +1535,7 @@ class EnemyAnimation:
         return self.animations[weapon][state][framenum]
 
 
+
 # class Tile(pygame.sprite.Sprite):
 #     def __init__(self, x, y):
 #         super().__init__(all_sprites, tiles)
@@ -1460,315 +1580,141 @@ def spawn_enemies():
                 # print(f)
                 arr.append(['go', int(f[0]), int(f[1])])
     # for enemy in enemies:
-    # print(enemy.trajectory)
-
-
-def Victory():
-    global running, end_True_run, money
-    running = False
-    end_True_run = True
-    money += 100
-    con = sqlite3.connect("Базы данных/Данные аккаунтов.db")
-    cur = con.cursor()
-    cur.execute(
-        f"""UPDATE Data
-           SET money = '{money}'
-           WHERE name = '{name}'""")
-    cur.execute(
-        f"""UPDATE Data
-               SET training_1 = '3'
-               WHERE name = '{name}'""")
-    con.commit()
-    con.close()
-
-
-def button_end(numder):
-    global main_menu_run, game1_run, end_True_run, end_False_run, running
-    if numder == 1:
-        running = False
-        end_True_run = False
-        end_False_run = False
-        game1_run = True
-        main_menu_run = False
-    else:
-        running = False
-        end_True_run = False
-        end_False_run = False
-        game1_run = False
-        main_menu_run = True
+        # print(enemy.trajectory)
 
 
 if __name__ == '__main__':
+
+    FPS = 60
     pygame.init()
-    name = ''
-    main_run = True
-    entry_menu_run = True
-    main_menu_run = False
-    game1_run = False
-    end_True_run = False
-    end_False_run = False
+    size = width, height = 1400, 700
+    screen = pygame.display.set_mode(size, pygame.DOUBLEBUF, 32)
+    clock = pygame.time.Clock()
+    pygame.mouse.set_visible(True)  # False на релизе
 
-    while main_run:
-        if entry_menu_run:
-            pygame.display.set_caption('2d_shooter')
-            size = width, height = 600, 600
-            screen = pygame.display.set_mode(size)
+    walls = pygame.sprite.Group()  # стены
+    walls_rendering = pygame.sprite.Group()
+    characters = pygame.sprite.Group()  # персонажи
+    other_sprites = pygame.sprite.Group()  # все остальное
+    all_sprites = pygame.sprite.Group()
+    bullets = pygame.sprite.Group()
+    lootboxes = pygame.sprite.Group()  # ящики
+    enemies = pygame.sprite.Group()
+    characters_rendering = pygame.sprite.Group()
+    doors = pygame.sprite.Group()
+    wall_boundaries = pygame.sprite.Group()
+    doors_wall = pygame.sprite.Group()
 
-            background = pygame.image.load('Все для дизайна/Меню регистрации.jpg').convert()
-            background = pygame.transform.smoothscale(background, screen.get_size())
+    tiles = pygame.sprite.Group()
+    furniture = pygame.sprite.Group()
+    map_texture = pygame.sprite.Group()
 
-            input_boxes = []
-            input_boxes.append(InputBox(screen, 55, 250, 492, 26, size=24))
-            input_boxes.append(InputBox(screen, 55, 326, 492, 26, size=24))
+    ammo_box_image = pygame.image.load('assets/ammo_box.png')
+    sniper_rifle_image = pygame.image.load('assets/sniper_rifle2.png').convert()
+    sniper_rifle_image.set_colorkey((255, 255, 255))
+    ak_47_image = pygame.image.load('assets/ak_47_image2.png').convert()
+    ak_47_image.set_colorkey((255, 255, 255))
+    glock_image = pygame.image.load('assets/glock_image.png').convert()
+    glock_image.set_colorkey((255, 255, 255))
+    im1 = pygame.image.load('assets/Игрок_2.png').convert()
+    im1.set_colorkey((255, 255, 255))
+    knife_image = pygame.image.load('assets/knife_image.png').convert()
+    knife_image.set_colorkey((255, 255, 255))
+    shotgun_image = pygame.image.load('assets/shotgun_image.png').convert()
+    shotgun_image.set_colorkey((255, 255, 255))
+    medkit_image = pygame.image.load('assets/medkit.png').convert()
 
-            buttons = []
-            buttons.append(Button_rect(screen, 42, 372, 250, 60, Entrance))
-            buttons.append(Button_rect(screen, 308, 372, 250, 60, registration))
 
-            text = text_output(screen, 65, 490, text='', size=32)
+    im1 = pygame.image.load('1.png').convert()
+    im1.set_colorkey((0, 0, 0))
 
-            fps = 60
-            clock = pygame.time.Clock()
-            running = True
-            while running:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                        main_run = False
-                    for box in input_boxes:
-                        box.handle_event(event)
-                screen.blit(background, (0, 0))
+    map_image = pygame.image.load('assets/map_100_texture.png')
 
-                for box in input_boxes:
-                    box.draw(screen)
-                for button in buttons:
-                    button.update()
-                text.update()
-                pygame.display.flip()
-                clock.tick(fps)
-        if main_menu_run:
-            location_objects = {'1': (345, 143), 'замок': (402, 173), 'надписаь': (358, 194), 'звезда': (374, 276)}
-            pygame.init()
-            pygame.display.set_caption('2d_shooter')
-            size = width, height = 1400, 700
-            screen = pygame.display.set_mode(size)
+    door_textures = {}
+    for i in range(1, 7):
+        for j in {'vert', 'hor'}:
+            door_textures[(i, j)] = pygame.image.load(f'assets/door_textures/frame{i}_{j}.png')
 
-            background = pygame.image.load('Все для дизайна/Главное меню игры.jpg').convert()
-            background = pygame.transform.smoothscale(background, screen.get_size())
-            screen.blit(background, (0, 0))
+    player_anim = PlayerAnimation()
+    enemy_anim = EnemyAnimation()
+    running = True
 
-            lvl_text = []
-            for i in range(6):
-                lvl_now = pygame.image.load(f'Все для дизайна/{i + 1} уровень.png')
-                lvl_now.set_colorkey((255, 255, 255))
-                lvl_text.append(lvl_now)
+    # MedkitLootbox(500, 500)
+    # MedkitLootbox(500, 700)
+    camera = Camera()
+    spawn_enemies()
+    # enemy1 = Enemy([['go', 3800, 1600], ['go', 3800, 170], ['go', 250, 100],
+    #                 ['go', 500, 100],
+    #                 ['stop', 100], ['go', 100, 100]])
 
-            lock = pygame.image.load(f'Все для дизайна/Замок.png')
-            lock.set_colorkey((255, 255, 255))
+    player = Player(4550, 4280)  # 550, 550  # 4500, 4250  # 3800,1500
+    MapTexture()
+    wall_layout = pic_to_map(
+        'assets/map100.png')  # массив из пикселей картинки, где находится стена
+    while running:
+        # tr.fill((0,0,0,0))
+        # внутри игрового цикла ещё один цикл
+        # приёма и обработки сообщений
+        for event in pygame.event.get():
+            # при закрытии окна
+            if event.type == pygame.QUIT:
+                running = False
+            # РЕАКЦИЯ НА ОСТАЛЬНЫЕ СОБЫТИЯ
+        # отрисовка и изменение свойств объектов
+        # characters.update()
+        player.get_current_weapon().update()
+        player.rect = player.image.get_rect(size=(64, 64),
+                                            center=player.rect.center)
+        player.update()
+        for i in characters:
+            if i != player:
+                i.update()
+        camera.update(player)
+        for sprite in all_sprites:
+            camera.apply(sprite)
+        screen.fill('black')
+        map_texture.draw(screen)
+        # tiles.draw(screen)  # exp
 
-            star = pygame.image.load(f'Все для дизайна/звезда.png')
-            star.set_colorkey((255, 255, 255))
+        furniture.draw(screen)
+        player.tracing()
+        other_sprites.draw(screen)
+        # walls.draw(screen)
+        # wallllll.rendering = True
+        # for i in walls:
+        #     i.update()
+        # walls_rendering.draw(screen)
 
-            button = []
+        characters_rendering.draw(screen)
+        # enemies.draw(screen)
+        other_sprites.draw(screen)
+        doors.draw(screen)
+        # затемнение экрана
+        # surface2 = pygame.Surface(size)
+        # surface2.set_alpha(140)
+        # screen.blit(surface2, (0, 0))
 
-            money, lvl = reading(name)
-            screen.blit(background, (0, 0))
-            separation()
+        doors.update()
+        for i in characters:
+            i.rect = i.image.get_rect(size=(64, 64), center=i.rect.center)
+        bullets.update()
+        bullets.draw(screen)
+        # player.draw_health_bar('green', player.health)
+        for lootbox in lootboxes:
+            lootbox.draw_open_progress()
+        # enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery,
+        #             player.rect.centerx,
+        #             player.rect.centery)
+        # player.tracing()
+        # pygame.draw.rect(screen, 'red', player.rect, width=1)
+        # pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
+        screen.blit(
+            pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True,
+                                              'red'), (100, 100))
 
-            fps = 90
-            clock = pygame.time.Clock()
-            running = True
-            while running:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                        main_run = False
-                for i in button:
-                    i.update()
-                pygame.display.flip()
-                clock.tick(fps)
-        if game1_run:
-            FPS = 60
-
-            size = width, height = 1400, 700
-            screen = pygame.display.set_mode(size, pygame.DOUBLEBUF, 32)
-            clock = pygame.time.Clock()
-            pygame.mouse.set_visible(True)  # False на релизе
-
-            walls = pygame.sprite.Group()  # стены
-            walls_rendering = pygame.sprite.Group()
-            characters = pygame.sprite.Group()  # персонажи
-            other_sprites = pygame.sprite.Group()  # все остальное
-            all_sprites = pygame.sprite.Group()
-            bullets = pygame.sprite.Group()
-            lootboxes = pygame.sprite.Group()  # ящики
-            enemies = pygame.sprite.Group()
-            characters_rendering = pygame.sprite.Group()
-            doors = pygame.sprite.Group()
-            wall_boundaries = pygame.sprite.Group()
-            doors_wall = pygame.sprite.Group()
-
-            tiles = pygame.sprite.Group()
-            furniture = pygame.sprite.Group()
-            map_texture = pygame.sprite.Group()
-
-            sniper_rifle_image = pygame.image.load('assets/sniper_rifle2.png').convert()
-            sniper_rifle_image.set_colorkey((255, 255, 255))
-            ak_47_image = pygame.image.load('assets/ak_47_image2.png').convert()
-            ak_47_image.set_colorkey((255, 255, 255))
-            glock_image = pygame.image.load('assets/glock_image.png').convert()
-            glock_image.set_colorkey((255, 255, 255))
-            im1 = pygame.image.load('assets/Игрок_2.png').convert()
-            im1.set_colorkey((255, 255, 255))
-            knife_image = pygame.image.load('assets/knife_image.png').convert()
-            knife_image.set_colorkey((255, 255, 255))
-            shotgun_image = pygame.image.load('assets/shotgun_image.png').convert()
-            shotgun_image.set_colorkey((255, 255, 255))
-            medkit_image = pygame.image.load('assets/medkit.png').convert()
-
-            im1 = pygame.image.load('1.png').convert()
-            im1.set_colorkey((0, 0, 0))
-
-            map_image = pygame.image.load('assets/map_100_texture.png')
-
-            door_textures = {}
-            for i in range(1, 7):
-                for j in {'vert', 'hor'}:
-                    door_textures[(i, j)] = pygame.image.load(f'assets/door_textures/frame{i}_{j}.png')
-
-            player_anim = PlayerAnimation()
-            enemy_anim = EnemyAnimation()
-            running = True
-
-            MedkitLootbox(500, 500)
-            MedkitLootbox(500, 700)
-            camera = Camera()
-            spawn_enemies()
-            # enemy1 = Enemy([['go', 3800, 1600], ['go', 3800, 170], ['go', 250, 100],
-            #                 ['go', 500, 100],
-            #                 ['stop', 100], ['go', 100, 100]])
-
-            player = Player(4550, 4280)  # 550, 550  # 4500, 4250  # 3800,1500
-            MapTexture()
-            wall_layout = pic_to_map(
-                'assets/map100.png')  # массив из пикселей картинки, где находится стена
-            while running:
-                # tr.fill((0,0,0,0))
-                # внутри игрового цикла ещё один цикл
-                # приёма и обработки сообщений
-                for event in pygame.event.get():
-                    # при закрытии окна
-                    if event.type == pygame.QUIT:
-                        running = False
-                        main_run = False
-                    # РЕАКЦИЯ НА ОСТАЛЬНЫЕ СОБЫТИЯ
-                # отрисовка и изменение свойств объектов
-                # characters.update()
-                player.get_current_weapon().update()
-                player.rect = player.image.get_rect(size=(64, 64),
-                                                    center=player.rect.center)
-                player.update()
-                for i in characters:
-                    if i != player:
-                        i.update()
-                camera.update(player)
-                for sprite in all_sprites:
-                    camera.apply(sprite)
-                screen.fill('black')
-                map_texture.draw(screen)
-                # tiles.draw(screen)  # exp
-
-                furniture.draw(screen)
-                player.tracing()
-                other_sprites.draw(screen)
-                # walls.draw(screen)
-                # wallllll.rendering = True
-                # for i in walls:
-                #     i.update()
-                # walls_rendering.draw(screen)
-
-                characters_rendering.draw(screen)
-                # enemies.draw(screen)
-                other_sprites.draw(screen)
-                doors.draw(screen)
-                # затемнение экрана
-                # surface2 = pygame.Surface(size)
-                # surface2.set_alpha(140)
-                # screen.blit(surface2, (0, 0))
-
-                doors.update()
-                for i in characters:
-                    i.rect = i.image.get_rect(size=(64, 64), center=i.rect.center)
-                bullets.update()
-                bullets.draw(screen)
-                # player.draw_health_bar('green', player.health)
-                for lootbox in lootboxes:
-                    lootbox.draw_open_progress()
-                # enemy1.beam(enemy1.rect.centerx, enemy1.rect.centery,
-                #             player.rect.centerx,
-                #             player.rect.centery)
-                # player.tracing()
-                # pygame.draw.rect(screen, 'red', player.rect, width=1)
-                # pygame.draw.rect(screen, 'green', player.wall_hitbox, width=1)
-                screen.blit(
-                    pygame.font.Font(None, 30).render('Врагов осталось: ' + str(len(enemies)), True,
-                                                      'red'), (50, 50))
-                if len(enemies) == 0:
-                    Victory()
-
-                # screen.blit(pygame.font.Font(None, 40).render('/'.join([str((x.real_posx, x.real_posy)) for x in enemies]), True, 'red'), (100, 200))
-                player.draw_interface()
-                clock.tick(FPS)
-                # screen.blit(tmp_image, (player.rect.x, player.rect.y))
-                pygame.display.flip()
-        if end_False_run:
-            pygame.display.set_caption('2d_shooter')
-            size = width, height = 1400, 700
-            screen = pygame.display.set_mode(size)
-
-            background = pygame.image.load('Все для дизайна/Проигрыш.jpg').convert()
-            background = pygame.transform.smoothscale(background, screen.get_size())
-
-            buttons = []
-            buttons.append(Button_rect(screen, 243, 350, 910, 110, lambda: button_end(1)))
-            buttons.append(Button_rect(screen, 243, 502, 910, 110, lambda: button_end(2)))
-
-            fps = 60
-            clock = pygame.time.Clock()
-            running = True
-            while running:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                        main_run = False
-                screen.blit(background, (0, 0))
-                for button in buttons:
-                    button.update()
-                pygame.display.flip()
-                clock.tick(fps)
-        if end_True_run:
-            pygame.display.set_caption('2d_shooter')
-            size = width, height = 1400, 700
-            screen = pygame.display.set_mode(size)
-
-            background = pygame.image.load('Все для дизайна/Победа.jpg').convert()
-            background = pygame.transform.smoothscale(background, screen.get_size())
-
-            buttons = []
-            buttons.append(Button_rect(screen, 243, 350, 910, 110, lambda: button_end(1)))
-            buttons.append(Button_rect(screen, 243, 502, 910, 110, lambda: button_end(2)))
-
-            fps = 60
-            clock = pygame.time.Clock()
-            running = True
-            while running:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                        main_run = False
-                screen.blit(background, (0, 0))
-                for button in buttons:
-                    button.update()
-                pygame.display.flip()
-                clock.tick(fps)
-pygame.quit()
+        # screen.blit(pygame.font.Font(None, 40).render('/'.join([str((x.float_x, x.float_y)) for x in bullets]), True, 'red'), (100, 200))
+        player.draw_interface()
+        clock.tick(FPS)
+        # screen.blit(tmp_image, (player.rect.x, player.rect.y))
+        pygame.display.flip()
+    pygame.quit()
