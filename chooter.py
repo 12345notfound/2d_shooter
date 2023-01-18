@@ -448,9 +448,11 @@ class SniperRifle(Weapon):
 
 class Ak_47(Weapon):
     def __init__(self, whose):
-        super().__init__(speed=60, damage=10, frequency=5,
+        super().__init__(speed=60, damage=15, frequency=5,
                          clip_size=30, ammo=100, who=whose, reload_time=100,
                          queue=15)
+        if type(self.who) == Enemy:
+            self.damage = 2
         self.interface_image = ak_47_image
         self.reload_anim_frames = 20
         self.reload_anim_multiplier = 5
@@ -460,6 +462,8 @@ class Glock(Weapon):
     def __init__(self, whose):
         super().__init__(speed=50, damage=10, frequency=15, clip_size=17,
                          ammo=85, reload_time=45, who=whose)
+        if type(self.who) == Enemy:
+            self.damage = 3
         self.interface_image = glock_image
         self.reload_anim_frames = 15
         self.reload_anim_multiplier = 3
@@ -509,10 +513,10 @@ class Shotgun(Weapon):
 
 class Knife:
     def __init__(self, whose):
-        self.damage = 20
+        self.damage = 200
         self.frequency = 1
         self.frequency_now = 0
-        self.range_squared = 10000
+        self.range_squared = 16000
         self.interface_image = knife_image
         self.attack_anim_frames = 15
         self.who = whose
@@ -546,8 +550,7 @@ class LootBox(pygame.sprite.Sprite):
 
     def __init__(self, x, y):
         super().__init__(all_sprites, other_sprites, lootboxes)
-        self.image = pygame.surface.Surface((50, 50))
-        self.image.fill((192, 0, 192))
+        self.image = ammo_box_image
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.centery = y
@@ -558,7 +561,15 @@ class LootBox(pygame.sprite.Sprite):
         pass
 
     def use(self):
-        player.get_current_weapon().ammo += 50
+        weapon = player.get_current_weapon()
+        if type(weapon) == Ak_47:
+            weapon.ammo += 10
+        elif type(weapon) == Shotgun:
+            weapon.ammo += 1
+        elif type(weapon) == Glock:
+            weapon.ammo += 10
+        elif type(weapon) == Knife:
+            player.weapon_list[0].ammo += 3 if type(player.weapon_list[0]) == Shotgun else 10
         self.kill()
 
     def reset_timer(self):
@@ -584,6 +595,7 @@ class LootBox(pygame.sprite.Sprite):
 class MedkitLootbox(LootBox):
     def __init__(self, x, y):
         super().__init__(x, y)
+        self.image = medkit_image
 
     def use(self):
         player.medkits += 1
@@ -606,6 +618,7 @@ class Bullet(pygame.sprite.Sprite):
         self.speedx = speed_x  # скорость по х и у
         self.speedy = speed_y
         self.damage = damage  # урон
+        self.damage_dealt = False
 
     def update(self):
         self.float_x = self.rect.centerx + self.speedx / 50 + self.float_x - int(
@@ -624,11 +637,13 @@ class Bullet(pygame.sprite.Sprite):
                     translation_coordinates(self.rect.centerx - 5,
                                             self.rect.centery - 5), 10,10, 'bullet'):
                 self.kill()
-            sprites = pygame.sprite.spritecollide(self, characters,
-                                                       False)
-            if sprites:
-                sprites[0].take_damage(self.damage)
+            sprites = pygame.sprite.spritecollideany(self, characters,
+                                                       )
+            if sprites is not None and not self.damage_dealt:
+                self.damage_dealt = True
+                sprites.take_damage(self.damage)
                 self.kill()
+
 
 
 class ShotgunBullet(Bullet):
@@ -791,7 +806,7 @@ class Entity(pygame.sprite.Sprite):
         return weapontype, states[state], frame_num
 
     def take_damage(self, damage):
-        self.health -= damage * 0.1
+        self.health -= damage
         if self.health <= 0:
             self.health = 0
             self.kill()
@@ -913,6 +928,12 @@ class Player(Entity):
         self.max_health = self.health = 100
         self.wall_hitbox = self.image.get_rect(center=self.rect.center, width=54, height=54)
         self.wall_hitbox.h = self.wall_hitbox.w = 54
+
+    def take_damage(self, damage):
+        self.health -= damage
+        if self.health <= 0:
+            self.health = 0
+            self.kill()
 
     def kill(self):
         self.end_game()
@@ -1138,7 +1159,7 @@ class Enemy(Entity):
         self.real_posy = trajectory[0][2]
         self.speed = 3
         self.stop = 0
-        self.max_health = self.health = 200
+        self.max_health = self.health = 100
         self.direction = 0
         self.reset_target = 0
         self.distance_beam = [False,
@@ -1156,6 +1177,21 @@ class Enemy(Entity):
     #     elif (player.rect.x - self.rect.x) ** 2 + (player.rect.y - self.rect.y) ** 2 < 10000:
     #         return True
     #     elif self.beam(player.rect.x, player.rect.y, self.rect.x, self.rect.y)
+
+    def kill(self):
+        super().kill()
+        rand = random.random()
+        if rand <= 0.01:
+            MedkitLootbox(self.rect.centerx, self.rect.centery)
+        rand = random.random()
+        if rand < 0.3:
+            LootBox(self.rect.centerx, self.rect.centery)
+
+    def take_damage(self, damage):
+        self.health -= damage * 1
+        if self.health <= 0:
+            self.health = 0
+            self.kill()
 
     def get_current_weapon(self):
         return self.weapon_enemy
@@ -1573,6 +1609,7 @@ if __name__ == '__main__':
     furniture = pygame.sprite.Group()
     map_texture = pygame.sprite.Group()
 
+    ammo_box_image = pygame.image.load('assets/ammo_box.png')
     sniper_rifle_image = pygame.image.load('assets/sniper_rifle2.png').convert()
     sniper_rifle_image.set_colorkey((255, 255, 255))
     ak_47_image = pygame.image.load('assets/ak_47_image2.png').convert()
@@ -1602,8 +1639,8 @@ if __name__ == '__main__':
     enemy_anim = EnemyAnimation()
     running = True
 
-    MedkitLootbox(500, 500)
-    MedkitLootbox(500, 700)
+    # MedkitLootbox(500, 500)
+    # MedkitLootbox(500, 700)
     camera = Camera()
     spawn_enemies()
     # enemy1 = Enemy([['go', 3800, 1600], ['go', 3800, 170], ['go', 250, 100],
@@ -1675,7 +1712,7 @@ if __name__ == '__main__':
             pygame.font.Font(None, 40).render(str(int(clock.get_fps())), True,
                                               'red'), (100, 100))
 
-        # screen.blit(pygame.font.Font(None, 40).render('/'.join([str((x.real_posx, x.real_posy)) for x in enemies]), True, 'red'), (100, 200))
+        # screen.blit(pygame.font.Font(None, 40).render('/'.join([str((x.float_x, x.float_y)) for x in bullets]), True, 'red'), (100, 200))
         player.draw_interface()
         clock.tick(FPS)
         # screen.blit(tmp_image, (player.rect.x, player.rect.y))

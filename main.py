@@ -927,6 +927,12 @@ class Enemy(Entity):
     #         return True
     #     elif self.beam(player.rect.x, player.rect.y, self.rect.x, self.rect.y)
 
+    def kill(self):
+        super().kill()
+        rand = random.random()
+        if rand <= 0.01:
+            MedkitLootbox(self.rect.centerx, self.rect.centery)
+
     def get_current_weapon(self):
         return self.weapon_enemy
 
@@ -1372,15 +1378,13 @@ if __name__ == '__main__':
     enemy_anim = EnemyAnimation()
     running = True
 
-    MedkitLootbox(500, 500)
-    MedkitLootbox(500, 700)
     camera = Camera()
     spawn_enemies()
     # enemy1 = Enemy([['go', 3800, 1600], ['go', 3800, 170], ['go', 250, 100],
     #                 ['go', 500, 100],
     #                 ['stop', 100], ['go', 100, 100]])
 
-    player = Player(3900, 2090)  # 550, 550  # 4500, 4250  # 3800,1500
+    player = Player(3860, 1900)  # 550, 550  # 4500, 4250  # 3800,1500
     MapTexture()
     wall_layout = pic_to_map(
         'assets/map100.png')  # массив из пикселей картинки, где находится стена
