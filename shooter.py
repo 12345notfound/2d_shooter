@@ -429,7 +429,7 @@ class Knife:
         self.damage = 200
         self.frequency = 1
         self.frequency_now = 0
-        self.range_squared = 16000
+        self.range_squared = 10000
         self.interface_image = knife_image
         self.attack_anim_frames = 15
         self.who = whose
@@ -515,7 +515,6 @@ class MedkitLootbox(LootBox):
         self.kill()
 
 
-
 class Bullet(pygame.sprite.Sprite):
     """Класс пули"""
 
@@ -549,15 +548,14 @@ class Bullet(pygame.sprite.Sprite):
             # pygame.sprite.spritecollide(self, walls, False)
             if defining_intersection(
                     translation_coordinates(self.rect.centerx - 5,
-                                            self.rect.centery - 5), 10,10, 'bullet'):
+                                            self.rect.centery - 5), 10, 10, 'bullet'):
                 self.kill()
             sprites = pygame.sprite.spritecollideany(self, characters,
-                                                       )
+                                                     )
             if sprites is not None and not self.damage_dealt:
                 self.damage_dealt = True
                 sprites.take_damage(self.damage)
                 self.kill()
-
 
 
 class ShotgunBullet(Bullet):
@@ -574,6 +572,7 @@ class ShotgunBullet(Bullet):
         self.timer += 1
         if self.timer > 8:
             self.kill()
+
 
 class Entity(pygame.sprite.Sprite):
     """Общий класс сущности"""
@@ -946,7 +945,6 @@ class Player(Entity):
                         if not enemy in characters_rendering:
                             characters_rendering.add(enemy)
                     else:
-                        enemy.distance_beam = [False, False]
                         if enemy in characters_rendering:
                             characters_rendering.remove(enemy)
                 else:
