@@ -418,15 +418,17 @@ class Shotgun(Weapon):
 class Knife:
     def __init__(self, whose):
         self.damage = 200
-        self.frequency = 1
+        self.frequency = 60
         self.frequency_now = 0
-        self.range_squared = 8100
+        self.range_squared = 10000
         self.interface_image = knife_image
         self.attack_anim_frames = 15
         self.who = whose
 
     def update(self):
-        if pygame.mouse.get_pressed()[0]:
+        if self.frequency_now != self.frequency:
+            self.frequency_now += 1
+        elif pygame.mouse.get_pressed()[0]:
             min_dist = 1000000000000  # очень большая константа
             nearest_enemy = None  # ближайший враг
             for enemy in enemies:
@@ -439,8 +441,12 @@ class Knife:
             if nearest_enemy is not None and (
                     player.rect.centerx - nearest_enemy.rect.centerx) ** 2 \
                     + (
-                    player.rect.centerx - nearest_enemy.rect.centerx) ** 2 <= self.range_squared:
+                    player.rect.centery - nearest_enemy.rect.centery) ** 2 <= self.range_squared and (
+                abs(self.who.determining_angle(*self.who.rect.center, *nearest_enemy.rect.center)) < 90 or (player.rect.centerx - nearest_enemy.rect.centerx) ** 2 \
+                    + (
+                    player.rect.centery - nearest_enemy.rect.centery) ** 2 <= self.range_squared // 2):
                 nearest_enemy.take_damage(self.damage)
+                self.frequency_now = 0
             self.who.is_attacking = True
 
     def draw_interface(self):
@@ -843,7 +849,7 @@ class Player(Entity):
     def heal(self):
         """Использование игроком аптечки"""
         self.health = min(self.max_health,
-                          self.health + int(self.max_health * 0.2))
+                          self.health + int(self.max_health * 0.3))
 
     def draw_interface(self):
         """Отрисовка интерфейса игрока"""
@@ -1048,7 +1054,7 @@ class Enemy(Entity):
         self.real_posy = trajectory[0][2]
         self.speed = 3
         self.stop = 0
-        self.max_health = self.health = 200
+        self.max_health = self.health = 150
         self.direction = 0
         self.reset_target = 0
         self.distance_beam = [False,
@@ -1059,6 +1065,15 @@ class Enemy(Entity):
         self.angle_observation = False
         self.desired_angle = False
         self.weapon_enemy = Ak_47(self)
+
+    def kill(self):
+        super().kill()
+        rand = random.random()
+        if rand <= 0.02:
+            MedkitLootbox(*self.rect.center)
+        rand = random.random()
+        if rand < 0.4:
+            LootBox(*self.rect.center)
 
     def get_current_weapon(self):
         return self.weapon_enemy
